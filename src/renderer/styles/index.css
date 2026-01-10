@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* Tailwind v4 theme configuration */
+@theme {
+  /* Custom colors */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-900: #0c4a6e;
+
+  --color-dark-bg: #0a0a0a;
+  --color-dark-surface: #1a1a1a;
+  --color-dark-elevated: #2a2a2a;
+  --color-dark-border: #333333;
+
+  /* Custom animations */
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-bounce-subtle: bounce 2s ease-in-out infinite;
+}
+
+/* Global styles */
+body {
+  background-color: var(--color-dark-bg);
+  color: white;
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
