@@ -49,15 +49,15 @@ const electronAPI = {
   
   // File operations
   file: {
-    openDialog: (): Promise<string[] | null> => 
+    openDialog: () => 
       ipcRenderer.invoke('file:open-dialog'),
-    addToPlaylist: (paths: string[]): Promise<IpcResponse<'file:add-to-playlist'>> => 
+    addToPlaylist: (paths: string[]) => 
       ipcRenderer.invoke('file:add-to-playlist', { paths }),
   },
   
   // Job management
   jobs: {
-    startConversion: (request: IpcRequest<'job:start-conversion'>): Promise<{ jobId: string }> => 
+    startConversion: (request: any) => 
       ipcRenderer.invoke('job:start-conversion', request),
     startDownload: (request: IpcRequest<'job:start-download'>): Promise<{ jobId: string }> => 
       ipcRenderer.invoke('job:start-download', request),

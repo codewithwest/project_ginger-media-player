@@ -23,6 +23,9 @@ if (require('electron-squirrel-startup')) {
 
 import { MediaServer } from './services/MediaServer';
 import { TrayService } from './services/TrayService';
+import { JobManager } from './services/JobManager';
+import { ConversionService } from './services/ConversionService';
+import { DownloadService } from './services/DownloadService';
 
 let mainWindow: BrowserWindow | null = null;
 let mediaServer: MediaServer | null = null;
@@ -224,28 +227,34 @@ function registerIpcHandlers(): void {
     return [];
   });
 
-  // Job management (stubs)
+  // Initialize Job Manager
+  const jobManager = new JobManager(mainWindow!);
+  const conversionService = new ConversionService();
+  const downloadService = new DownloadService();
+  
+  jobManager.registerService('conversion', conversionService);
+  jobManager.registerService('download', downloadService);
+
+  // Job management
   ipcMain.handle('job:start-conversion', async (_event, request) => {
     console.log('Start conversion:', request);
-    // TODO: Implement conversion service
-    return { jobId: 'stub-job-id' };
+    const jobId = await jobManager.startConversion(request);
+    return { jobId };
   });
 
   ipcMain.handle('job:start-download', async (_event, request) => {
     console.log('Start download:', request);
-    // TODO: Implement download service
-    return { jobId: 'stub-job-id' };
+    const jobId = await jobManager.startDownload(request);
+    return { jobId };
   });
 
   ipcMain.handle('job:cancel', async (_event, { jobId }) => {
     console.log('Cancel job:', jobId);
-    // TODO: Implement job manager
+    jobManager.cancelJob(jobId);
   });
 
   ipcMain.handle('job:get-all', async () => {
-    console.log('Get all jobs');
-    // TODO: Implement job manager
-    return [];
+    return jobManager.getAllJobs();
   });
 
   // Downloads

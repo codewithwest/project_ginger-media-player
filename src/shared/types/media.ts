@@ -32,6 +32,13 @@ export interface JobProgress {
   message?: string;
 }
 
+export interface Job extends JobProgress {
+  createdAt: number;
+  details: ConversionRequest | DownloadRequest;
+  outputFile?: string;
+  error?: string;
+}
+
 export interface ConversionRequest {
   inputPath: string;
   outputPath: string;
