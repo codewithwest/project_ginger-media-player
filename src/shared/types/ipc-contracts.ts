@@ -7,6 +7,7 @@ import type {
   ConversionRequest,
   DownloadRequest,
   MediaFormat,
+  MediaMetadata,
 } from './media';
 
 export interface IpcContracts {
@@ -20,6 +21,10 @@ export interface IpcContracts {
   'media:previous': { request: void; response: void };
   'media:toggle-shuffle': { request: void; response: void };
   'media:toggle-repeat': { request: void; response: void };
+  
+  // Media Engine
+  'media:get-stream-url': { request: { filePath: string }; response: string };
+  'media:get-metadata': { request: { filePath: string }; response: MediaMetadata };
   
   // Playback state (Main → Renderer events)
   'media:state-changed': { data: PlaybackState };

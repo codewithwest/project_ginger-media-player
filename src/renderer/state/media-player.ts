@@ -1,20 +1,26 @@
 // Zustand store for media player state
 
 import { create } from 'zustand';
-import type { PlaybackState, MediaSource } from '@shared/types';
+import type { PlaybackState, MediaSource, MediaMetadata } from '@shared/types';
 
 interface MediaPlayerStore extends PlaybackState {
+  streamUrl?: string;
+  metadata?: MediaMetadata;
+  
   // Actions
   setPlaybackState: (state: Partial<PlaybackState>) => void;
-  play: (sourceId: string) => Promise<void>;
-  pause: () => Promise<void>;
-  stop: () => Promise<void>;
-  seek: (position: number) => Promise<void>;
-  setVolume: (volume: number) => Promise<void>;
-  next: () => Promise<void>;
-  previous: () => Promise<void>;
-  toggleShuffle: () => Promise<void>;
-  toggleRepeat: () => Promise<void>;
+  setStreamUrl: (url: string) => void;
+  setMetadata: (metadata: MediaMetadata) => void;
+  
+  play: (sourceId?: string) => void;
+  pause: () => void;
+  stop: () => void;
+  seek: (position: number) => void;
+  setVolume: (volume: number) => void;
+  next: () => void;
+  previous: () => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
 }
 
 export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
@@ -26,44 +32,53 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
   volume: 1.0,
   shuffle: false,
   repeat: 'off',
+  streamUrl: undefined,
+  metadata: undefined,
   
   // Actions
   setPlaybackState: (newState) => set((state) => ({ ...state, ...newState })),
+  setStreamUrl: (url) => set({ streamUrl: url }),
+  setMetadata: (metadata) => set({ metadata }),
   
-  play: async (sourceId: string) => {
-    await window.electronAPI.media.play(sourceId);
+  play: (sourceId?: string) => {
+    set({ status: 'playing' });
+    // Local playback logic handled by VideoPlayer component via state subscription
   },
   
-  pause: async () => {
-    await window.electronAPI.media.pause();
+  pause: () => {
+    set({ status: 'paused' });
   },
   
-  stop: async () => {
-    await window.electronAPI.media.stop();
+  stop: () => {
+    set({ status: 'stopped', position: 0 });
   },
   
-  seek: async (position: number) => {
-    await window.electronAPI.media.seek(position);
+  seek: (position: number) => {
+    set({ position });
   },
   
-  setVolume: async (volume: number) => {
-    await window.electronAPI.media.setVolume(volume);
+  setVolume: (volume: number) => {
     set({ volume });
   },
   
-  next: async () => {
-    await window.electronAPI.media.next();
+  next: () => {
+    // TODO: Implement playlist logic
   },
   
-  previous: async () => {
-    await window.electronAPI.media.previous();
+  previous: () => {
+    // TODO: Implement playlist logic
   },
   
-  toggleShuffle: async () => {
-    await window.electronAPI.media.toggleShuffle();
+  toggleShuffle: () => {
+    set((state) => ({ shuffle: !state.shuffle }));
   },
   
-  toggleRepeat: async () => {
-    await window.electronAPI.media.toggleRepeat();
+  toggleRepeat: () => {
+    set((state) => {
+      const modes = ['off', 'one', 'all'] as const;
+      const currentIndex = modes.indexOf(state.repeat);
+      const nextIndex = (currentIndex + 1) % modes.length;
+      return { repeat: modes[nextIndex] };
+    });
   },
 }));

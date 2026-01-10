@@ -1,7 +1,7 @@
 // Player controls component
 
 import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Volume2 } from 'lucide-react';
-import { useMediaPlayerStore } from '@renderer/state/media-player';
+import { useMediaPlayerStore } from '../../state/media-player';
 
 export function PlayerControls() {
   const {
@@ -9,8 +9,11 @@ export function PlayerControls() {
     shuffle,
     repeat,
     volume,
+    position,
+    duration,
     play,
     pause,
+    seek,
     next,
     previous,
     toggleShuffle,
@@ -20,17 +23,52 @@ export function PlayerControls() {
   
   const isPlaying = status === 'playing';
   
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPosition = parseFloat(e.target.value);
+    seek(newPosition);
+  };
+  
   const handlePlayPause = () => {
     if (isPlaying) {
       pause();
     } else {
-      // For now, play a stub source
-      play('stub-source-id');
+      play();
     }
   };
   
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4 p-6 w-full">
+      {/* Progress Bar */}
+      <div className="flex items-center gap-3 w-full px-2 mb-2">
+        <span className="text-xs text-gray-400 w-10 text-right font-mono">
+          {formatTime(position)}
+        </span>
+        <input
+          type="range"
+          min="0"
+          max={duration || 100}
+          value={position}
+          onChange={handleSeek}
+          className="flex-1 h-1 bg-dark-border rounded-full appearance-none cursor-pointer
+            [&::-webkit-slider-thumb]:appearance-none
+            [&::-webkit-slider-thumb]:w-3
+            [&::-webkit-slider-thumb]:h-3
+            [&::-webkit-slider-thumb]:rounded-full
+            [&::-webkit-slider-thumb]:bg-primary-500
+            [&::-webkit-slider-thumb]:transition-all
+            [&::-webkit-slider-thumb]:hover:scale-125"
+        />
+        <span className="text-xs text-gray-400 w-10 font-mono">
+          {formatTime(duration)}
+        </span>
+      </div>
+
       {/* Main controls */}
       <div className="flex items-center justify-center gap-4">
         {/* Shuffle */}

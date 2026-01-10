@@ -54,3 +54,22 @@ export interface MediaFormat {
   vcodec?: string;
   acodec?: string;
 }
+
+export interface MediaMetadata {
+  duration: number;
+  format: string;
+  bitrate: number;
+  size: number;
+  video?: {
+    codec: string;
+    width: number;
+    height: number;
+    fps: number;
+  };
+  audio?: {
+    codec: string;
+    channels: number;
+    sampleRate: number;
+  };
+  tags?: Record<string, string>;
+}

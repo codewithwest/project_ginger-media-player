@@ -21,7 +21,10 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+import { MediaServer } from './services/MediaServer';
+
 let mainWindow: BrowserWindow | null = null;
+let mediaServer: MediaServer | null = null;
 
 const createWindow = (): void => {
   // Create the browser window with security settings
@@ -61,7 +64,7 @@ const createWindow = (): void => {
 
   // Handle window close - keep app running for background playback
   mainWindow.on('close', (event) => {
-    if (!app.isQuitting) {
+    if (!(app as any).isQuitting) {
       event.preventDefault();
       mainWindow?.hide();
     }
@@ -69,7 +72,16 @@ const createWindow = (): void => {
 };
 
 // App lifecycle
-app.on('ready', () => {
+app.on('ready', async () => {
+  // Start media server
+  mediaServer = new MediaServer();
+  try {
+    const url = await mediaServer.start();
+    console.log('Media server started at:', url);
+  } catch (err) {
+    console.error('Failed to start media server:', err);
+  }
+
   createWindow();
   registerIpcHandlers();
   registerGlobalShortcuts();
@@ -92,7 +104,7 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-  app.isQuitting = true;
+  (app as any).isQuitting = true;
 });
 
 app.on('will-quit', () => {
@@ -100,8 +112,38 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
 
+// ... code
+
 // IPC Handlers
 function registerIpcHandlers(): void {
+  // Media Engine Handlers
+  ipcMain.handle('media:get-stream-url', async (_event, { filePath }) => {
+    if (!mediaServer) throw new Error('Media server not running');
+    // Decide whether to stream or file serve based on extension?
+    // For now, let's just use the /stream endpoint for everything so we have consistency,
+    // or let the MediaServer logic handle it (which we defined in setupRoutes).
+    
+    // Actually, our MediaServer has logic:
+    // /file?path=... for direct serving
+    // /stream?path=... for transcoding
+    
+    // Simple logic for now: use /stream for everything? No, inefficient for MP4.
+    const ext = path.extname(filePath).toLowerCase();
+    const directPlayExtensions = ['.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.aac'];
+    
+    const baseUrl = mediaServer.getUrl();
+    if (directPlayExtensions.includes(ext)) {
+      return `${baseUrl}/file?path=${encodeURIComponent(filePath)}`;
+    } else {
+      return `${baseUrl}/stream?path=${encodeURIComponent(filePath)}`;
+    }
+  });
+
+  ipcMain.handle('media:get-metadata', async (_event, { filePath }) => {
+    if (!mediaServer) throw new Error('Media server not running');
+    return mediaServer.getMetadata(filePath);
+  });
+
   // Media controls (stubs for now)
   ipcMain.handle('media:play', async (_event, { sourceId }) => {
     console.log('Play requested:', sourceId);

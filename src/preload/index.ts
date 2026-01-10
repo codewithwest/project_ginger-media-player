@@ -25,6 +25,12 @@ const electronAPI = {
       ipcRenderer.invoke('media:toggle-shuffle'),
     toggleRepeat: (): Promise<void> => 
       ipcRenderer.invoke('media:toggle-repeat'),
+
+    // Media Engine
+    getStreamUrl: (filePath: string): Promise<string> => 
+      ipcRenderer.invoke('media:get-stream-url', { filePath }),
+    getMetadata: (filePath: string): Promise<any> => 
+      ipcRenderer.invoke('media:get-metadata', { filePath }),
     
     // Event listeners
     onStateChanged: (callback: (state: IpcEventData<'media:state-changed'>) => void) => {
