@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMediaPlayerStore } from '../../state/media-player';
 
 export function VideoPlayer() {
@@ -73,17 +73,51 @@ export function VideoPlayer() {
   
   if (!streamUrl) return null;
 
+  /* New state for subtitles */
+  const [subtitleUrl, setSubtitleUrl] = useState<string | null>(null);
+  const { currentSource } = useMediaPlayerStore(); // Need access to the source file path
+
+  useEffect(() => {
+    async function loadSubtitles() {
+      if (currentSource?.path) {
+        try {
+          const url = await window.electronAPI.media.getSubtitlesUrl(currentSource.path);
+          setSubtitleUrl(url);
+        } catch (e) {
+          console.error("Failed to load subtitles", e);
+          setSubtitleUrl(null);
+        }
+      } else {
+        setSubtitleUrl(null);
+      }
+    }
+    loadSubtitles();
+  }, [currentSource?.path]);
+
+  // ... previous effects ...
+
   return (
     <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative group">
       <video
         ref={videoRef}
         src={streamUrl}
+        crossOrigin="anonymous" 
         className="max-w-full max-h-full object-contain shadow-2xl"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleEnded}
         onClick={() => status === 'playing' ? pause() : play()}
-      />
+      >
+        {subtitleUrl && (
+          <track
+            label="English"
+            kind="subtitles"
+            srcLang="en"
+            src={subtitleUrl}
+            default
+          />
+        )}
+      </video>
     </div>
   );
 }

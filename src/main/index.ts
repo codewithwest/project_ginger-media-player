@@ -22,9 +22,11 @@ if (require('electron-squirrel-startup')) {
 }
 
 import { MediaServer } from './services/MediaServer';
+import { TrayService } from './services/TrayService';
 
 let mainWindow: BrowserWindow | null = null;
 let mediaServer: MediaServer | null = null;
+let trayService: TrayService | null = null;
 
 const createWindow = (): void => {
   // Create the browser window with security settings
@@ -68,7 +70,12 @@ const createWindow = (): void => {
       event.preventDefault();
       mainWindow?.hide();
     }
+    return false;
   });
+  
+  // Initialize Tray Service
+  trayService = new TrayService(mainWindow);
+  trayService.createTray();
 };
 
 // App lifecycle
@@ -142,6 +149,12 @@ function registerIpcHandlers(): void {
   ipcMain.handle('media:get-metadata', async (_event, { filePath }) => {
     if (!mediaServer) throw new Error('Media server not running');
     return mediaServer.getMetadata(filePath);
+  });
+
+  ipcMain.handle('media:get-subtitles-url', async (_event, { filePath }) => {
+    if (!mediaServer) throw new Error('Media server not running');
+    const baseUrl = mediaServer.getUrl();
+    return `${baseUrl}/subtitles?path=${encodeURIComponent(filePath)}`;
   });
 
   // Media controls (stubs for now)

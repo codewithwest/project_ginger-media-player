@@ -31,6 +31,8 @@ const electronAPI = {
       ipcRenderer.invoke('media:get-stream-url', { filePath }),
     getMetadata: (filePath: string): Promise<any> => 
       ipcRenderer.invoke('media:get-metadata', { filePath }),
+    getSubtitlesUrl: (filePath: string): Promise<string> => 
+      ipcRenderer.invoke('media:get-subtitles-url', { filePath }),
     
     // Event listeners
     onStateChanged: (callback: (state: IpcEventData<'media:state-changed'>) => void) => {

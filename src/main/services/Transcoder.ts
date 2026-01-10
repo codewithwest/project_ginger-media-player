@@ -45,4 +45,19 @@ export class TranscoderService {
 
     return command;
   }
+  /**
+   * Extracts subtitles from the media file and converts them to WebVTT format.
+   * Returns a readable stream of the VTT content.
+   */
+  extractSubtitles(filePath: string): ffmpeg.FfmpegCommand {
+    return ffmpeg(filePath)
+      .outputOptions([
+        '-map 0:s:0?', // Map the first subtitle stream if it exists
+        '-f webvtt',   // Output format: WebVTT
+      ])
+      .on('error', (err) => {
+        if (err.message.includes('Output stream closed')) return;
+        console.error('Subtitle extraction error:', err.message);
+      });
+  }
 }

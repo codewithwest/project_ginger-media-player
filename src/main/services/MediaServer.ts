@@ -86,6 +86,28 @@ export class MediaServer {
         res.status(500).json({ error: 'Failed to get metadata' });
       }
     });
+
+    // 4. Subtitles (VTT extraction)
+    this.app.get('/subtitles', (req, res) => {
+      const filePath = req.query.path as string;
+      
+      if (!filePath || !fs.existsSync(filePath)) {
+        res.status(404).send('File not found');
+        return;
+      }
+
+      console.log(`[MediaServer] Extracting subtitles for: ${filePath}`);
+
+      res.setHeader('Content-Type', 'text/vtt');
+      
+      const command = this.transcoder.extractSubtitles(filePath);
+      
+      command.pipe(res, { end: true });
+
+      req.on('close', () => {
+        command.kill('SIGKILL');
+      });
+    });
   }
 
   async start(): Promise<string> {
