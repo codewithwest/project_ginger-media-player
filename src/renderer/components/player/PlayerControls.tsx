@@ -134,28 +134,30 @@ export function PlayerControls() {
       </div>
       
       {/* Volume control */}
-      <div className="flex items-center gap-3 px-4">
-        <Volume2 className="w-5 h-5 text-gray-400" />
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={volume}
-          onChange={(e) => setVolume(parseFloat(e.target.value))}
-          className="flex-1 h-1 bg-dark-border rounded-full appearance-none cursor-pointer
-            [&::-webkit-slider-thumb]:appearance-none
-            [&::-webkit-slider-thumb]:w-3
-            [&::-webkit-slider-thumb]:h-3
-            [&::-webkit-slider-thumb]:rounded-full
-            [&::-webkit-slider-thumb]:bg-primary-500
-            [&::-webkit-slider-thumb]:cursor-pointer
-            [&::-webkit-slider-thumb]:transition-all
-            [&::-webkit-slider-thumb]:hover:scale-125"
-        />
-        <span className="text-sm text-gray-400 w-12 text-right">
-          {Math.round(volume * 100)}%
-        </span>
+      {/* Volume control */}
+      <div className="absolute right-6 bottom-8 group flex items-center bg-dark-elevated rounded-full p-2 hover:w-48 w-10 transition-all duration-300 overflow-hidden shadow-lg border border-white/5">
+        <Volume2 className="w-6 h-6 text-gray-400 flex-shrink-0 cursor-pointer" />
+        
+        <div className="w-0 group-hover:w-full flex items-center gap-3 transition-all duration-300 opacity-0 group-hover:opacity-100 pl-3">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="flex-1 h-1 bg-dark-border rounded-full appearance-none cursor-pointer
+              [&::-webkit-slider-thumb]:appearance-none
+              [&::-webkit-slider-thumb]:w-3
+              [&::-webkit-slider-thumb]:h-3
+              [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-primary-500
+              [&::-webkit-slider-thumb]:cursor-pointer"
+          />
+          <span className="text-xs text-gray-400 w-8 text-right font-mono">
+            {Math.round(volume * 100)}%
+          </span>
+        </div>
       </div>
     </div>
   );
