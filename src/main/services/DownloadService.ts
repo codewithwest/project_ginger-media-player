@@ -93,7 +93,18 @@ export class DownloadService {
   cancel(jobId: string) {
     const process = this.activeDownloads.get(jobId);
     if (process) {
-      process.kill('SIGKILL');
+      console.log('Cancelling download process:', process);
+      try {
+        if (typeof process.kill === 'function') {
+          process.kill('SIGKILL');
+        } else if (typeof process.cancel === 'function') {
+          process.cancel();
+        } else {
+          console.warn(`Could not cancel job ${jobId}: process object has no kill/cancel method`);
+        }
+      } catch (err) {
+        console.error(`Error cancelling job ${jobId}:`, err);
+      }
       this.activeDownloads.delete(jobId);
     }
   }
