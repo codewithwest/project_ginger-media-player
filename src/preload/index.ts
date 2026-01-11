@@ -122,6 +122,12 @@ const electronAPI = {
       return () => ipcRenderer.removeListener('update:progress', subscription);
     },
   },
+  
+  // Releases
+  releases: {
+    list: (): Promise<string[]> => ipcRenderer.invoke('releases:list'),
+    getContent: (filename: string): Promise<string> => ipcRenderer.invoke('releases:content', filename),
+  },
 };
 
 // Expose API to renderer

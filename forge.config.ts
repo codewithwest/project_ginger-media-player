@@ -11,6 +11,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     executableName: 'ginger-media-player',
+    extraResource: ['./docs'],
   },
   rebuildConfig: {},
   makers: [

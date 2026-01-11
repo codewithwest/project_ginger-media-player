@@ -9,6 +9,8 @@ import { DownloadService } from './services/DownloadService';
 import { LibraryService } from './services/LibraryService';
 import { PlaylistService } from './services/PlaylistService';
 import { UpdateService } from './services/UpdateService';
+import { ReleaseService } from './services/ReleaseService';
+
 
 // Security: Disable remote module
 app.on('remote-require', (event) => {
@@ -98,6 +100,7 @@ function registerIpcHandlers(): void {
   libraryService = new LibraryService();
   playlistService = new PlaylistService();
   updateService = new UpdateService(mainWindow!);
+  new ReleaseService();
   
   jobManager.registerService('conversion', conversionService);
   jobManager.registerService('download', downloadService);

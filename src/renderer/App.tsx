@@ -1,19 +1,22 @@
+
 // Main React application component
 
 import { useEffect, useState } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity, Music } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music, FileText } from 'lucide-react';
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { JobsView } from './components/jobs/JobsView';
 import { LibraryView } from './components/library/LibraryView';
+import { ReleasesView } from './components/release/ReleasesView';
 
 export function App() {
   const { addToPlaylist, playAtIndex, playlist, status, streamUrl, loadPlaylist } = useMediaPlayerStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [showReleases, setShowReleases] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   
   useEffect(() => {
@@ -62,11 +65,7 @@ export function App() {
         // We need the index of the first added item. 
         // If playlist was empty, it's 0. If it had items, it's old length.
         const startIndex = playlist.length; 
-        // Wait a tick for state update? Zustand updates are sync usually but side effects might lag?
-        // Actually, we called addToPlaylist which triggers a set.
-        // But we can't access updated playlist generic from hook immediately in closure?
-        // Let's just play at index we know.
-         playAtIndex(startIndex);
+        playAtIndex(startIndex);
       }
     }
   };
@@ -75,14 +74,8 @@ export function App() {
   useEffect(() => {
     const cleanup = window.electronAPI.file.onFileOpenFromCLI(async (filePath: string) => {
       console.log('Received file from CLI:', filePath);
-      // Determine type (local file or url?)
-      // For now assume path is local if not starting with http
       const isUrl = filePath.startsWith('http');
       console.log('Is URL:', isUrl);
-      
-      // If it's a URL, maybe we download logic or stream?
-      // For simple playback, treat as ID.
-      // Reuse handleOpenFiles logic mostly.
       
       const newItem = {
         id: filePath,
@@ -92,8 +85,6 @@ export function App() {
       };
       
       useMediaPlayerStore.getState().addToPlaylist(newItem);
-      // Play immediately?
-      // Find index
       const state = useMediaPlayerStore.getState();
       const index = state.playlist.length - 1; // It was just added
       state.playAtIndex(index);
@@ -126,6 +117,13 @@ export function App() {
            >
              <Activity className="w-4 h-4" />
            </button>
+           <button 
+             onClick={() => setShowReleases(!showReleases)}
+             className={`p-1 rounded hover:bg-white/10 ${showReleases ? 'text-indigo-400' : 'text-gray-400'}`}
+             title="Release Notes"
+           >
+             <FileText className="w-4 h-4" /> 
+           </button>
         </div>
       </div>
       
@@ -137,6 +135,7 @@ export function App() {
         <div className="flex-1 flex flex-col relative bg-gradient-to-br from-gray-900 to-black">
           {/* Library Overlay */}
           {showLibrary && <LibraryView onClose={() => setShowLibrary(false)} />}
+          {showReleases && <ReleasesView onClose={() => setShowReleases(false)} />}
 
           {/* Main Stage (Player) */}
           <div className="flex-1 relative flex items-center justify-center overflow-hidden">
