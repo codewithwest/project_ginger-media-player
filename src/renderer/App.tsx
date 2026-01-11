@@ -43,11 +43,11 @@ export function App() {
   }, []);
   
   const handleOpenFiles = async () => {
-    const files = await window.electronAPI.file.openDialog();
+    const files = (await window.electronAPI.file.openDialog()) as string[];
     if (files && files.length > 0) {
       console.log('Opening files:', files);
       
-      const newItems = files.map(filePath => ({
+      const newItems = files.map((filePath: string) => ({
         id: filePath, // Using path as ID for now
         type: 'local' as const,
         path: filePath,
@@ -73,11 +73,12 @@ export function App() {
   
   // Handle CLI file opening
   useEffect(() => {
-    const cleanup = window.electronAPI.file.onFileOpenFromCLI(async (filePath) => {
+    const cleanup = window.electronAPI.file.onFileOpenFromCLI(async (filePath: string) => {
       console.log('Received file from CLI:', filePath);
       // Determine type (local file or url?)
       // For now assume path is local if not starting with http
       const isUrl = filePath.startsWith('http');
+      console.log('Is URL:', isUrl);
       
       // If it's a URL, maybe we download logic or stream?
       // For simple playback, treat as ID.

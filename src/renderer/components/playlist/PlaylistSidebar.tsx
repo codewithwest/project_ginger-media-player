@@ -1,6 +1,16 @@
-import { useState } from 'react';
+
+import { useState, CSSProperties } from 'react';
 import { useMediaPlayerStore } from '../../state/media-player';
 import { Play, Trash2, ListMusic, Plus, Download } from 'lucide-react';
+import * as ReactWindow from 'react-window';
+import { AutoSizer } from 'react-virtualized-auto-sizer';
+
+const List = (ReactWindow as any).FixedSizeList || ReactWindow.FixedSizeList;
+
+// Note: If AutoSizer fails with "no default export", we might need { AutoSizer }
+// But usually in Vite + TS with esModuleInterop, default import is correct for this package.
+// If linter complains, we might need to cast or ignore.
+// However, I'll stick to default based on typical usage, unless build fails.
 
 export function PlaylistSidebar() {
   const { 
@@ -9,8 +19,7 @@ export function PlaylistSidebar() {
     playAtIndex, 
     removeFromPlaylist,
     clearPlaylist,
-    addToPlaylist,
-    status
+    addToPlaylist
   } = useMediaPlayerStore();
 
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -19,13 +28,13 @@ export function PlaylistSidebar() {
   const handleAddFiles = async () => {
     const files = await window.electronAPI.file.openDialog();
     if (files && files.length > 0) {
-      const newItems = files.map(filePath => ({
+      const newItems = files.map((filePath: any) => ({
         id: filePath,
         type: 'local' as const,
         path: filePath,
-        title: filePath.split('/').pop()
+        title: typeof filePath === 'string' ? filePath.split('/').pop() || 'Unknown' : 'Unknown'
       }));
-      newItems.forEach(item => addToPlaylist(item));
+      newItems.forEach((item: any) => addToPlaylist(item));
     }
   };
 
@@ -50,6 +59,54 @@ export function PlaylistSidebar() {
     }
   };
 
+  const Row = ({ index, style }: { index: number, style: CSSProperties }) => {
+    const item = playlist[index];
+    const isActive = index === currentIndex;
+    
+    return (
+      <div style={style}>
+         <div 
+            className={`
+              group relative flex items-center gap-3 p-3 mx-2 rounded-lg cursor-pointer transition-all duration-200 h-[60px]
+              ${isActive 
+                ? 'bg-primary-500/20 text-primary-200 border border-primary-500/30' 
+                : 'hover:bg-dark-elevated text-gray-400 hover:text-gray-200 border border-transparent'
+              }
+            `}
+            onDoubleClick={() => playAtIndex(index)}
+          >
+            <div className="w-6 flex justify-center flex-shrink-0">
+              {isActive ? (
+                <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+              ) : (
+                <span className="text-xs text-gray-600 group-hover:hidden">{index + 1}</span>
+              )}
+              <Play className="w-3 h-3 hidden group-hover:block text-gray-300" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {item.title || item.path.split('/').pop()}
+              </p>
+              <p className="text-xs opacity-60 truncate">
+                {item.artist || 'Unknown Artist'}
+              </p>
+            </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeFromPlaylist(index);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+      </div>
+    );
+  };
+
   if (playlist.length === 0) {
     return (
       <div className="w-80 h-full bg-dark-surface border-l border-dark-border p-4 flex flex-col items-center justify-center text-gray-500 gap-4">
@@ -58,7 +115,6 @@ export function PlaylistSidebar() {
           <p>Playlist Empty</p>
         </div>
         
-        {/* Buttons for empty state */}
         <div className="flex flex-col gap-3 w-full max-w-[200px]">
            {!showUrlInput ? (
              <>
@@ -111,7 +167,7 @@ export function PlaylistSidebar() {
 
   return (
     <div className="w-80 h-full bg-dark-surface border-l border-dark-border flex flex-col">
-      <div className="p-4 border-b border-dark-border flex flex-col gap-3">
+      <div className="p-4 border-b border-dark-border flex flex-col gap-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-200 flex items-center gap-2">
             <ListMusic className="w-4 h-4" />
@@ -162,54 +218,19 @@ export function PlaylistSidebar() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-        {playlist.map((item, index) => {
-          const isActive = index === currentIndex;
-          return (
-            <div 
-              key={`${item.id}-${index}`}
-              className={`
-                group relative flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200
-                ${isActive 
-                  ? 'bg-primary-500/20 text-primary-200 border border-primary-500/30' 
-                  : 'hover:bg-dark-elevated text-gray-400 hover:text-gray-200 border border-transparent'
-                }
-              `}
-              onDoubleClick={() => playAtIndex(index)}
+      <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+        <AutoSizer>
+          {({ height, width }: { height: number, width: number }) => (
+            <List
+              height={height}
+              width={width}
+              itemCount={playlist.length}
+              itemSize={68}
             >
-              {/* Status Icon */}
-              <div className="w-6 flex justify-center">
-                {isActive ? (
-                  <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-                ) : (
-                  <span className="text-xs text-gray-600 group-hover:hidden">{index + 1}</span>
-                )}
-                <Play className="w-3 h-3 hidden group-hover:block text-gray-300" />
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {item.title || item.path.split('/').pop()}
-                </p>
-                <p className="text-xs opacity-60 truncate">
-                  {item.artist || 'Unknown Artist'}
-                </p>
-              </div>
-
-              {/* Remove Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeFromPlaylist(index);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          );
-        })}
+              {Row}
+            </List>
+          )}
+        </AutoSizer>
       </div>
     </div>
   );
