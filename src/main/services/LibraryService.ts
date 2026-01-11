@@ -80,6 +80,11 @@ export class LibraryService {
     const supportedExts = ['.mp3', '.mp4', '.mkv', '.webm', '.wav', '.flac', '.ogg', '.m4a', '.mov', '.avi'];
     const newTracks: LibraryTrack[] = [];
 
+    if (this.data.folders.length === 0) {
+        console.log('No folders to scan.');
+        return [];
+    }
+
     // existing tracks map for quick lookup
     const existingMap = new Map(this.data.tracks.map(t => [t.path, t]));
 
@@ -129,12 +134,17 @@ export class LibraryService {
   }
 
   private async recursiveReaddir(dir: string): Promise<string[]> {
-    const dirents = await fs.promises.readdir(dir, { withFileTypes: true });
-    const files = await Promise.all(dirents.map((dirent) => {
-      const res = path.resolve(dir, dirent.name);
-      return dirent.isDirectory() ? this.recursiveReaddir(res) : res;
-    }));
-    return Array.prototype.concat(...files);
+    try {
+      const dirents = await fs.promises.readdir(dir, { withFileTypes: true });
+      const files = await Promise.all(dirents.map((dirent) => {
+        const res = path.resolve(dir, dirent.name);
+        return dirent.isDirectory() ? this.recursiveReaddir(res) : res;
+      }));
+      return files.flat();
+    } catch (e) {
+      console.warn(`Failed to read directory ${dir}:`, e);
+      return [];
+    }
   }
 
   private generateId(filePath: string): string {
