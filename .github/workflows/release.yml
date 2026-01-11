@@ -18,7 +18,7 @@ jobs:
          - name: Install Native Build Tools
            run: |
               sudo apt-get update
-              sudo apt-get install -y rpm fakeroot
+              sudo apt-get install -y fakeroot
 
          - name: Setup Node.js
            uses: actions/setup-node@v4
@@ -30,11 +30,11 @@ jobs:
            run: npm install
 
          - name: Build and Package
-           # This generates the .deb and .rpm files in out/make/
+           # This generates the .deb files in out/make/
            run: npm run make -- --platform=linux --arch=x64
 
          - name: Debug Verify Files
-           run: find out/make -type f \( -name "*.deb" -o -name "*.rpm" \)
+           run: find out/make -type f -name "*.deb"
 
          - name: Upload to Release
            uses: softprops/action-gh-release@v2
@@ -43,7 +43,6 @@ jobs:
               # Recursive glob to find files in subfolders
               files: |
                  out/make/**/*.deb
-                 out/make/**/*.rpm
               fail_on_unmatched_files: true
            env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

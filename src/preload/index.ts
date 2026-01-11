@@ -53,6 +53,11 @@ const electronAPI = {
       ipcRenderer.invoke('file:open-dialog'),
     addToPlaylist: (paths: string[]) => 
       ipcRenderer.invoke('file:add-to-playlist', { paths }),
+    onFileOpenFromCLI: (callback: (path: string) => void) => {
+      const subscription = (_event: IpcRendererEvent, path: string) => callback(path);
+      ipcRenderer.on('file:open-from-cli', subscription);
+      return () => ipcRenderer.removeListener('file:open-from-cli', subscription);
+    },
   },
   
   // Job management

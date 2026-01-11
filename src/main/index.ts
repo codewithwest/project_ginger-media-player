@@ -16,10 +16,51 @@ app.on('remote-get-global', (event) => {
   event.preventDefault();
 });
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling
-if (require('electron-squirrel-startup')) {
+// Single Instance Lock
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
   app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      
+      // Handle file drop / CLI argument from second instance
+      handleCommandLineArgs(commandLine);
+    }
+  });
+
+  // Handle creating/removing shortcuts on Windows when installing/uninstalling
+  if (require('electron-squirrel-startup')) {
+    app.quit();
+  }
 }
+
+function handleCommandLineArgs(argv: string[]) {
+  // Simple argument parser
+  // In dev: electron . [file] (argv[0]=electron, argv[1]=., argv[2]=file)
+  // In prod: app [file] (argv[0]=app, argv[1]=file)
+  
+  const args = argv.slice(app.isPackaged ? 1 : 2);
+  const filePath = args.find(arg => !arg.startsWith('-')); // First non-flag argument
+  
+  if (filePath && mainWindow) {
+    // Check if it looks like a URL or file path
+    // If relative path, resolve it?
+    // workingDirectory is available in second-instance but not easily in 'ready' for first instance unless we use process.cwd()
+    // For now, assume absolute or resolve from cwd if safe.
+    
+    // We send this to renderer to handle "opening"
+    // We need to ensure renderer is loaded.
+    console.log('Opening file from CLI:', filePath);
+    mainWindow.webContents.send('file:open-from-cli', filePath);
+  }
+}
+
 
 import { MediaServer } from './services/MediaServer';
 import { TrayService } from './services/TrayService';
@@ -95,6 +136,12 @@ app.on('ready', async () => {
   createWindow();
   registerIpcHandlers();
   registerGlobalShortcuts();
+
+  // Handle CLI args for first instance
+  // Wait for window to load
+  mainWindow?.webContents.on('did-finish-load', () => {
+    handleCommandLineArgs(process.argv);
+  });
 });
 
 app.on('window-all-closed', () => {

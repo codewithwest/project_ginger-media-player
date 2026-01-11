@@ -48,6 +48,36 @@ export function App() {
     }
   };
   
+  // Handle CLI file opening
+  useEffect(() => {
+    const cleanup = window.electronAPI.file.onFileOpenFromCLI(async (filePath) => {
+      console.log('Received file from CLI:', filePath);
+      // Determine type (local file or url?)
+      // For now assume path is local if not starting with http
+      const isUrl = filePath.startsWith('http');
+      
+      // If it's a URL, maybe we download logic or stream?
+      // For simple playback, treat as ID.
+      // Reuse handleOpenFiles logic mostly.
+      
+      const newItem = {
+        id: filePath,
+        type: 'local' as const, // or 'url'
+        path: filePath,
+        title: filePath.split('/').pop() || filePath
+      };
+      
+      useMediaPlayerStore.getState().addToPlaylist(newItem);
+      // Play immediately?
+      // Find index
+      const state = useMediaPlayerStore.getState();
+      const index = state.playlist.length - 1; // It was just added
+      state.playAtIndex(index);
+    });
+    
+    return cleanup;
+  }, []);
+
   return (
     <div className="h-screen w-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden font-sans selection:bg-blue-500/30">
       {/* Three.js Background */}
