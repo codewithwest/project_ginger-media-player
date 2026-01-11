@@ -18,7 +18,7 @@ jobs:
          - name: Install Native Build Tools
            run: |
               sudo apt-get update
-              sudo apt-get install -y fakeroot
+              sudo apt-get install -y rpm fakeroot
 
          - name: Setup Node.js
            uses: actions/setup-node@v4

@@ -4,14 +4,16 @@ import { useEffect, useState } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music } from 'lucide-react';
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { JobsView } from './components/jobs/JobsView';
+import { LibraryView } from './components/library/LibraryView';
 
 export function App() {
   const { setPlaybackState, addToPlaylist, playAtIndex, playlist, status, streamUrl } = useMediaPlayerStore();
   const [showJobs, setShowJobs] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   
   useEffect(() => {
     // Subscribe to playback state changes from Main process
@@ -89,6 +91,13 @@ export function App() {
         <div className="flex-1" />
         <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
            <button 
+             onClick={() => setShowLibrary(!showLibrary)}
+             className={`p-1 rounded hover:bg-white/10 ${showLibrary ? 'text-indigo-400' : 'text-gray-400'}`}
+             title="Library"
+           >
+             <Music className="w-4 h-4" />
+           </button>
+           <button 
              onClick={() => setShowJobs(!showJobs)}
              className={`p-1 rounded hover:bg-white/10 ${showJobs ? 'text-blue-400' : 'text-gray-400'}`}
              title="Show Jobs"
@@ -104,6 +113,9 @@ export function App() {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col relative bg-gradient-to-br from-gray-900 to-black">
+          {/* Library Overlay */}
+          {showLibrary && <LibraryView onClose={() => setShowLibrary(false)} />}
+
           {/* Main Stage (Player) */}
           <div className="flex-1 relative flex items-center justify-center overflow-hidden">
             {streamUrl ? (

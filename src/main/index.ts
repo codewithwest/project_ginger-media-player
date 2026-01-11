@@ -68,9 +68,12 @@ import { JobManager } from './services/JobManager';
 import { ConversionService } from './services/ConversionService';
 import { DownloadService } from './services/DownloadService';
 
+import { LibraryService } from './services/LibraryService';
+
 let mainWindow: BrowserWindow | null = null;
 let mediaServer: MediaServer | null = null;
 let trayService: TrayService | null = null;
+let libraryService: LibraryService | null = null;
 
 const createWindow = (): void => {
   // Create the browser window with security settings
@@ -274,13 +277,46 @@ function registerIpcHandlers(): void {
     return [];
   });
 
-  // Initialize Job Manager
+  // Initialize Services
   const jobManager = new JobManager(mainWindow!);
   const conversionService = new ConversionService();
   const downloadService = new DownloadService();
+  libraryService = new LibraryService();
   
   jobManager.registerService('conversion', conversionService);
   jobManager.registerService('download', downloadService);
+
+  // Library Management
+  ipcMain.handle('library:add-folder', async (_event, { path }) => {
+    await libraryService?.addFolder(path);
+    return libraryService?.getTracks(); // Return updated list?
+  });
+
+  ipcMain.handle('library:pick-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory']
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
+
+  ipcMain.handle('library:remove-folder', async (_event, { path }) => {
+    await libraryService?.removeFolder(path);
+    return libraryService?.getTracks();
+  });
+
+  ipcMain.handle('library:scan', async () => {
+    return await libraryService?.scan();
+  });
+
+  ipcMain.handle('library:get-all', async () => {
+    return libraryService?.getTracks();
+  });
+  
+  ipcMain.handle('library:get-folders', async () => {
+    return libraryService?.getFolders();
+  });
 
   // Job management
   ipcMain.handle('job:start-conversion', async (_event, request) => {

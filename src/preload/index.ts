@@ -84,6 +84,16 @@ const electronAPI = {
       ipcRenderer.invoke('download:get-formats', { url }),
   },
   
+  // Library
+  library: {
+    addFolder: (path: string): Promise<any> => ipcRenderer.invoke('library:add-folder', { path }),
+    removeFolder: (path: string): Promise<any> => ipcRenderer.invoke('library:remove-folder', { path }),
+    scan: (): Promise<any> => ipcRenderer.invoke('library:scan'),
+    getAll: (): Promise<any[]> => ipcRenderer.invoke('library:get-all'),
+    getFolders: (): Promise<string[]> => ipcRenderer.invoke('library:get-folders'),
+    pickFolder: (): Promise<string | null> => ipcRenderer.invoke('library:pick-folder'),
+  },
+  
   // Window controls
   window: {
     minimize: (): Promise<void> => 

@@ -6,6 +6,8 @@ import type { PlaybackState, MediaSource, MediaMetadata } from '@shared/types';
 interface MediaPlayerStore extends PlaybackState {
   playlist: MediaSource[];
   currentIndex: number;
+  streamUrl?: string;
+  metadata?: MediaMetadata;
   
   // Actions
   setPlaybackState: (state: Partial<PlaybackState>) => void;
