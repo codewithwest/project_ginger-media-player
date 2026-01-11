@@ -8,6 +8,7 @@ import { ConversionService } from './services/ConversionService';
 import { DownloadService } from './services/DownloadService';
 import { LibraryService } from './services/LibraryService';
 import { PlaylistService } from './services/PlaylistService';
+import { UpdateService } from './services/UpdateService';
 
 // Security: Disable remote module
 app.on('remote-require', (event) => {
@@ -30,6 +31,7 @@ let mediaServer: MediaServer | null = null;
 let trayService: TrayService | null = null;
 let libraryService: LibraryService | null = null;
 let playlistService: PlaylistService | null = null;
+let updateService: UpdateService | null = null;
 
 function handleCommandLineArgs(argv: string[]) {
   const args = argv.slice(app.isPackaged ? 1 : 2);
@@ -95,6 +97,7 @@ function registerIpcHandlers(): void {
   const downloadService = new DownloadService();
   libraryService = new LibraryService();
   playlistService = new PlaylistService();
+  updateService = new UpdateService(mainWindow!);
   
   jobManager.registerService('conversion', conversionService);
   jobManager.registerService('download', downloadService);
@@ -214,6 +217,19 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('window:close', async () => {
     mainWindow?.close();
+  });
+
+  // Update Management
+  ipcMain.handle('update:check', () => {
+    updateService?.checkForUpdates();
+  });
+
+  ipcMain.handle('update:download', () => {
+    updateService?.downloadUpdate();
+  });
+
+  ipcMain.handle('update:install', () => {
+    updateService?.quitAndInstall();
   });
 }
 

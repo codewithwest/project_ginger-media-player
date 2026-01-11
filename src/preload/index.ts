@@ -105,6 +105,23 @@ const electronAPI = {
     close: (): Promise<void> => 
       ipcRenderer.invoke('window:close'),
   },
+
+  // Update
+  update: {
+    checkForUpdates: () => ipcRenderer.invoke('update:check'),
+    downloadUpdate: () => ipcRenderer.invoke('update:download'),
+    installUpdate: () => ipcRenderer.invoke('update:install'),
+    onStatusChange: (callback: (data: { status: string, info?: any, error?: string }) => void) => {
+      const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
+      ipcRenderer.on('update:status', subscription);
+      return () => ipcRenderer.removeListener('update:status', subscription);
+    },
+    onProgress: (callback: (data: any) => void) => {
+      const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
+      ipcRenderer.on('update:progress', subscription);
+      return () => ipcRenderer.removeListener('update:progress', subscription);
+    },
+  },
 };
 
 // Expose API to renderer

@@ -14,10 +14,32 @@ export function App() {
   const { addToPlaylist, playAtIndex, playlist, status, streamUrl, loadPlaylist } = useMediaPlayerStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   
   useEffect(() => {
     // Load persisted playlist
     loadPlaylist();
+
+    // Check for updates
+    const cleanStatus = window.electronAPI.update.onStatusChange(({ status }) => {
+      console.log('Update status:', status);
+      if (status === 'available') {
+        setUpdateAvailable(true);
+      }
+      if (status === 'downloaded') {
+        const confirm = window.confirm('Update downloaded. Restart now?');
+        if (confirm) window.electronAPI.update.installUpdate();
+      }
+    });
+    
+    // Check after short delay to let app load
+    setTimeout(() => {
+      window.electronAPI.update.checkForUpdates();
+    }, 5000);
+    
+    return () => {
+      cleanStatus();
+    };
   }, []);
   
   const handleOpenFiles = async () => {
@@ -152,6 +174,26 @@ export function App() {
         )}
       </div>
       
+      {/* Update Notification */}
+      {updateAvailable && (
+        <div className="absolute bottom-24 right-6 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 flex flex-col gap-2 animate-bounce-in">
+          <div className="font-bold">Update Available</div>
+          <div className="text-xs opacity-80">A new version is ready to verify.</div>
+          <button 
+             onClick={() => window.electronAPI.update.downloadUpdate()}
+             className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold mt-1 hover:bg-gray-100"
+          >
+            Download
+          </button>
+          <button 
+             onClick={() => setUpdateAvailable(false)}
+             className="text-xs text-white/50 hover:text-white mt-1"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Footer / Controls overlay logic ... */}
       <div className="h-24 bg-gradient-to-t from-black via-black/90 to-transparent absolute bottom-0 inset-x-0 z-30 pointer-events-none">
          <div className="w-full h-full flex items-center px-6 pointer-events-auto">
