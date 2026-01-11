@@ -1,7 +1,13 @@
-// Main process entry point
 
 import { app, BrowserWindow, ipcMain, dialog, globalShortcut } from 'electron';
 import path from 'path';
+import { MediaServer } from './services/MediaServer';
+import { TrayService } from './services/TrayService';
+import { JobManager } from './services/JobManager';
+import { ConversionService } from './services/ConversionService';
+import { DownloadService } from './services/DownloadService';
+import { LibraryService } from './services/LibraryService';
+import { PlaylistService } from './services/PlaylistService';
 
 // Security: Disable remote module
 app.on('remote-require', (event) => {
@@ -19,61 +25,21 @@ app.on('remote-get-global', (event) => {
 // Single Instance Lock
 const gotTheLock = app.requestSingleInstanceLock();
 
-if (!gotTheLock) {
-  app.quit();
-} else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, we should focus our window.
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-      
-      // Handle file drop / CLI argument from second instance
-      handleCommandLineArgs(commandLine);
-    }
-  });
-
-  // Handle creating/removing shortcuts on Windows when installing/uninstalling
-  if (require('electron-squirrel-startup')) {
-    app.quit();
-  }
-}
-
-function handleCommandLineArgs(argv: string[]) {
-  // Simple argument parser
-  // In dev: electron . [file] (argv[0]=electron, argv[1]=., argv[2]=file)
-  // In prod: app [file] (argv[0]=app, argv[1]=file)
-  
-  const args = argv.slice(app.isPackaged ? 1 : 2);
-  const filePath = args.find(arg => !arg.startsWith('-')); // First non-flag argument
-  
-  if (filePath && mainWindow) {
-    // Check if it looks like a URL or file path
-    // If relative path, resolve it?
-    // workingDirectory is available in second-instance but not easily in 'ready' for first instance unless we use process.cwd()
-    // For now, assume absolute or resolve from cwd if safe.
-    
-    // We send this to renderer to handle "opening"
-    // We need to ensure renderer is loaded.
-    console.log('Opening file from CLI:', filePath);
-    mainWindow.webContents.send('file:open-from-cli', filePath);
-  }
-}
-
-
-import { MediaServer } from './services/MediaServer';
-import { TrayService } from './services/TrayService';
-import { JobManager } from './services/JobManager';
-import { ConversionService } from './services/ConversionService';
-import { DownloadService } from './services/DownloadService';
-
-import { LibraryService } from './services/LibraryService';
-
 let mainWindow: BrowserWindow | null = null;
 let mediaServer: MediaServer | null = null;
 let trayService: TrayService | null = null;
 let libraryService: LibraryService | null = null;
+let playlistService: PlaylistService | null = null;
+
+function handleCommandLineArgs(argv: string[]) {
+  const args = argv.slice(app.isPackaged ? 1 : 2);
+  const filePath = args.find(arg => !arg.startsWith('-'));
+  
+  if (filePath && mainWindow) {
+    console.log('Opening file from CLI:', filePath);
+    mainWindow.webContents.send('file:open-from-cli', filePath);
+  }
+}
 
 const createWindow = (): void => {
   // Create the browser window with security settings
@@ -84,17 +50,13 @@ const createWindow = (): void => {
     minHeight: 600,
     backgroundColor: '#0a0a0a',
     webPreferences: {
-      // CRITICAL SECURITY SETTINGS
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
-      
-      // Preload script
       preload: path.join(__dirname, 'preload.js'),
     },
-    // Modern window styling
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 15, y: 15 },
   });
@@ -125,72 +87,63 @@ const createWindow = (): void => {
   trayService.createTray();
 };
 
-// App lifecycle
-app.on('ready', async () => {
-  // Start media server
-  mediaServer = new MediaServer();
-  try {
-    const url = await mediaServer.start();
-    console.log('Media server started at:', url);
-  } catch (err) {
-    console.error('Failed to start media server:', err);
-  }
-
-  createWindow();
-  registerIpcHandlers();
-  registerGlobalShortcuts();
-
-  // Handle CLI args for first instance
-  // Wait for window to load
-  mainWindow?.webContents.on('did-finish-load', () => {
-    handleCommandLineArgs(process.argv);
-  });
-});
-
-app.on('window-all-closed', () => {
-  // On macOS, keep app running when windows are closed
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  // On macOS, re-create window when dock icon is clicked
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  } else {
-    mainWindow?.show();
-  }
-});
-
-app.on('before-quit', () => {
-  (app as any).isQuitting = true;
-});
-
-app.on('will-quit', () => {
-  // Unregister all shortcuts
-  globalShortcut.unregisterAll();
-});
-
-// ... code
-
-// IPC Handlers
 function registerIpcHandlers(): void {
+  // Initialize Services
+  // Note: mainWindow is created before this function is called
+  const jobManager = new JobManager(mainWindow!);
+  const conversionService = new ConversionService();
+  const downloadService = new DownloadService();
+  libraryService = new LibraryService();
+  playlistService = new PlaylistService();
+  
+  jobManager.registerService('conversion', conversionService);
+  jobManager.registerService('download', downloadService);
+
+  // Playlist Persistence
+  ipcMain.handle('playlist:save', async (_event, { playlist }) => {
+    playlistService?.save(playlist);
+  });
+
+  ipcMain.handle('playlist:load', async () => {
+    return playlistService?.load();
+  });
+
+  // Library Management
+  ipcMain.handle('library:add-folder', async (_event, { path }) => {
+    await libraryService?.addFolder(path);
+    return libraryService?.getTracks();
+  });
+
+  ipcMain.handle('library:pick-folder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      properties: ['openDirectory']
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('library:remove-folder', async (_event, { path }) => {
+    await libraryService?.removeFolder(path);
+    return libraryService?.getTracks();
+  });
+
+  ipcMain.handle('library:scan', async () => {
+    return await libraryService?.scan();
+  });
+
+  ipcMain.handle('library:get-all', async () => {
+    return libraryService?.getTracks();
+  });
+  
+  ipcMain.handle('library:get-folders', async () => {
+    return libraryService?.getFolders();
+  });
+
   // Media Engine Handlers
   ipcMain.handle('media:get-stream-url', async (_event, { filePath }) => {
     if (!mediaServer) throw new Error('Media server not running');
-    // Decide whether to stream or file serve based on extension?
-    // For now, let's just use the /stream endpoint for everything so we have consistency,
-    // or let the MediaServer logic handle it (which we defined in setupRoutes).
-    
-    // Actually, our MediaServer has logic:
-    // /file?path=... for direct serving
-    // /stream?path=... for transcoding
-    
-    // Simple logic for now: use /stream for everything? No, inefficient for MP4.
     const ext = path.extname(filePath).toLowerCase();
     const directPlayExtensions = ['.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.aac'];
-    
     const baseUrl = mediaServer.getUrl();
     if (directPlayExtensions.includes(ext)) {
       return `${baseUrl}/file?path=${encodeURIComponent(filePath)}`;
@@ -210,129 +163,29 @@ function registerIpcHandlers(): void {
     return `${baseUrl}/subtitles?path=${encodeURIComponent(filePath)}`;
   });
 
-  // Media controls (stubs for now)
-  ipcMain.handle('media:play', async (_event, { sourceId }) => {
-    console.log('Play requested:', sourceId);
-    // TODO: Implement media engine
-  });
-
-  ipcMain.handle('media:pause', async () => {
-    console.log('Pause requested');
-    // TODO: Implement media engine
-  });
-
-  ipcMain.handle('media:stop', async () => {
-    console.log('Stop requested');
-    // TODO: Implement media engine
-  });
-
-  ipcMain.handle('media:seek', async (_event, { position }) => {
-    console.log('Seek requested:', position);
-    // TODO: Implement media engine
-  });
-
-  ipcMain.handle('media:set-volume', async (_event, { volume }) => {
-    console.log('Set volume:', volume);
-    // TODO: Implement media engine
-  });
-
-  ipcMain.handle('media:next', async () => {
-    console.log('Next track requested');
-    // TODO: Implement playlist logic
-  });
-
-  ipcMain.handle('media:previous', async () => {
-    console.log('Previous track requested');
-    // TODO: Implement playlist logic
-  });
-
-  ipcMain.handle('media:toggle-shuffle', async () => {
-    console.log('Toggle shuffle');
-    // TODO: Implement playlist logic
-  });
-
-  ipcMain.handle('media:toggle-repeat', async () => {
-    console.log('Toggle repeat');
-    // TODO: Implement playlist logic
-  });
-
   // File operations
   ipcMain.handle('file:open-dialog', async () => {
     const result = await dialog.showOpenDialog(mainWindow!, {
       properties: ['openFile', 'multiSelections'],
       filters: [
         { name: 'Media Files', extensions: ['mp3', 'mp4', 'mkv', 'avi', 'flac', 'wav', 'webm', 'm4a', 'ogg'] },
-        { name: 'Audio Files', extensions: ['mp3', 'flac', 'wav', 'm4a', 'ogg', 'aac'] },
-        { name: 'Video Files', extensions: ['mp4', 'mkv', 'avi', 'webm', 'mov'] },
-        { name: 'All Files', extensions: ['*'] },
       ],
     });
-
     return result.canceled ? null : result.filePaths;
-  });
-
-  ipcMain.handle('file:add-to-playlist', async (_event, { paths }) => {
-    console.log('Add to playlist:', paths);
-    // TODO: Implement playlist logic
-    return [];
-  });
-
-  // Initialize Services
-  const jobManager = new JobManager(mainWindow!);
-  const conversionService = new ConversionService();
-  const downloadService = new DownloadService();
-  libraryService = new LibraryService();
-  
-  jobManager.registerService('conversion', conversionService);
-  jobManager.registerService('download', downloadService);
-
-  // Library Management
-  ipcMain.handle('library:add-folder', async (_event, { path }) => {
-    await libraryService?.addFolder(path);
-    return libraryService?.getTracks(); // Return updated list?
-  });
-
-  ipcMain.handle('library:pick-folder', async () => {
-    const result = await dialog.showOpenDialog(mainWindow!, {
-      properties: ['openDirectory']
-    });
-    if (result.canceled || result.filePaths.length === 0) return null;
-    return result.filePaths[0];
-  });
-
-
-  ipcMain.handle('library:remove-folder', async (_event, { path }) => {
-    await libraryService?.removeFolder(path);
-    return libraryService?.getTracks();
-  });
-
-  ipcMain.handle('library:scan', async () => {
-    return await libraryService?.scan();
-  });
-
-  ipcMain.handle('library:get-all', async () => {
-    return libraryService?.getTracks();
-  });
-  
-  ipcMain.handle('library:get-folders', async () => {
-    return libraryService?.getFolders();
   });
 
   // Job management
   ipcMain.handle('job:start-conversion', async (_event, request) => {
-    console.log('Start conversion:', request);
     const jobId = await jobManager.startConversion(request);
     return { jobId };
   });
 
   ipcMain.handle('job:start-download', async (_event, request) => {
-    console.log('Start download:', request);
     const jobId = await jobManager.startDownload(request);
     return { jobId };
   });
 
   ipcMain.handle('job:cancel', async (_event, { jobId }) => {
-    console.log('Cancel job:', jobId);
     jobManager.cancelJob(jobId);
   });
 
@@ -342,7 +195,6 @@ function registerIpcHandlers(): void {
 
   // Downloads
   ipcMain.handle('download:get-formats', async (_event, { url }) => {
-    console.log('Get formats for:', url);
     // TODO: Implement yt-dlp integration
     return [];
   });
@@ -365,20 +217,68 @@ function registerIpcHandlers(): void {
   });
 }
 
-// Global shortcuts for media keys
 function registerGlobalShortcuts(): void {
   globalShortcut.register('MediaPlayPause', () => {
+    // TODO: Toggle playback via IPC to renderer if possible or main-controlled
     console.log('Media Play/Pause pressed');
-    // TODO: Toggle playback
   });
-
-  globalShortcut.register('MediaNextTrack', () => {
-    console.log('Media Next Track pressed');
-    // TODO: Next track
-  });
-
-  globalShortcut.register('MediaPreviousTrack', () => {
-    console.log('Media Previous Track pressed');
-    // TODO: Previous track
-  });
+  globalShortcut.register('MediaNextTrack', () => console.log('Media Next'));
+  globalShortcut.register('MediaPreviousTrack', () => console.log('Media Previous'));
 }
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      handleCommandLineArgs(commandLine);
+    }
+  });
+
+  if (require('electron-squirrel-startup')) {
+    app.quit();
+  }
+}
+
+app.on('ready', async () => {
+  mediaServer = new MediaServer();
+  try {
+    const url = await mediaServer.start();
+    console.log('Media server started at:', url);
+  } catch (err) {
+    console.error('Failed to start media server:', err);
+  }
+
+  createWindow();
+  registerIpcHandlers();
+  registerGlobalShortcuts();
+
+  mainWindow?.webContents.on('did-finish-load', () => {
+    handleCommandLineArgs(process.argv);
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  } else {
+    mainWindow?.show();
+  }
+});
+
+app.on('before-quit', () => {
+  (app as any).isQuitting = true;
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});

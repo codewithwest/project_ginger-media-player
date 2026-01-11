@@ -58,6 +58,8 @@ const electronAPI = {
       ipcRenderer.on('file:open-from-cli', subscription);
       return () => ipcRenderer.removeListener('file:open-from-cli', subscription);
     },
+    savePlaylist: (playlist: any[]) => ipcRenderer.invoke('playlist:save', { playlist }),
+    loadPlaylist: () => ipcRenderer.invoke('playlist:load'),
   },
   
   // Job management

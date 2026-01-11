@@ -1,5 +1,5 @@
-// Zustand store for media player state
 
+// Zustand store for media player state
 import { create } from 'zustand';
 import type { PlaybackState, MediaSource, MediaMetadata } from '@shared/types';
 
@@ -24,6 +24,8 @@ interface MediaPlayerStore extends PlaybackState {
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   
+  loadPlaylist: () => Promise<void>;
+
   // Playlist Actions
   addToPlaylist: (item: MediaSource) => void;
   removeFromPlaylist: (index: number) => void;
@@ -90,8 +92,7 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
     
     let nextIndex = currentIndex + 1;
     
-    // Logic for shuffle/repeat...
-    // Simplification: if shuffle is on, we should pick random, but for now linear shuffles
+    // Simplification: if shuffle is on, we should pick random
     if (shuffle) {
       nextIndex = Math.floor(Math.random() * playlist.length);
     } 
@@ -127,27 +128,69 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
     get().playAtIndex(prevIndex);
   },
   
-  addToPlaylist: (item) => set((state) => ({ playlist: [...state.playlist, item] })),
+  toggleShuffle: () => {
+    set((state) => ({ shuffle: !state.shuffle }));
+  },
   
-  removeFromPlaylist: (index) => set((state) => {
-    const newPlaylist = [...state.playlist];
+  toggleRepeat: () => {
+    set((state) => {
+      const modes = ['off', 'one', 'all'] as const;
+      const currentIndex = modes.indexOf(state.repeat);
+      const nextIndex = (currentIndex + 1) % modes.length;
+      return { repeat: modes[nextIndex] };
+    });
+  },
+
+  loadPlaylist: async () => {
+    try {
+      const playlist = await window.electronAPI.file.loadPlaylist();
+      if (playlist && Array.isArray(playlist)) {
+         set({ playlist });
+      }
+    } catch (err) {
+      console.error('Failed to load playlist:', err);
+    }
+  },
+
+  addToPlaylist: (item) => {
+    const { playlist } = get();
+    const newPlaylist = [...playlist, item];
+    set({ playlist: newPlaylist });
+    window.electronAPI.file.savePlaylist(newPlaylist);
+  },
+  
+  removeFromPlaylist: (index) => {
+    const { playlist, currentIndex } = get();
+    const newPlaylist = [...playlist];
     newPlaylist.splice(index, 1);
-    // Adjust current index if needed...
-    return { playlist: newPlaylist };
-  }),
+    
+    let newIndex = currentIndex;
+    if (index < currentIndex) {
+      newIndex--;
+    } else if (index === currentIndex) {
+      if (newIndex >= newPlaylist.length) {
+        newIndex = newPlaylist.length - 1;
+      }
+      if (newPlaylist.length === 0) {
+        newIndex = -1;
+        set({ status: 'stopped', currentSource: null });
+      }
+    }
+    
+    set({ playlist: newPlaylist, currentIndex: newIndex });
+    window.electronAPI.file.savePlaylist(newPlaylist);
+  },
   
-  clearPlaylist: () => set({ playlist: [], currentIndex: -1, currentSource: null, status: 'stopped' }),
+  clearPlaylist: () => {
+    set({ playlist: [], currentIndex: -1, currentSource: null, status: 'stopped' });
+    window.electronAPI.file.savePlaylist([]);
+  },
   
   playAtIndex: async (index) => {
     const { playlist } = get();
     if (index < 0 || index >= playlist.length) return;
     
     const item = playlist[index];
-    
-    // Fetch stream URL for the new item
-    // Note: We need to handle async here which might require updates to play action or separate effect
-    // But since this is a store action, we can just do side effects? 
-    // Ideally we invoke the electron API here
     
     try {
       const url = await window.electronAPI.media.getStreamUrl(item.path);
@@ -165,18 +208,5 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
     } catch (err) {
       console.error("Failed to play item", err);
     }
-  },
-  
-  toggleShuffle: () => {
-    set((state) => ({ shuffle: !state.shuffle }));
-  },
-  
-  toggleRepeat: () => {
-    set((state) => {
-      const modes = ['off', 'one', 'all'] as const;
-      const currentIndex = modes.indexOf(state.repeat);
-      const nextIndex = (currentIndex + 1) % modes.length;
-      return { repeat: modes[nextIndex] };
-    });
   },
 }));

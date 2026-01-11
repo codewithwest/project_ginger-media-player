@@ -11,14 +11,13 @@ import { JobsView } from './components/jobs/JobsView';
 import { LibraryView } from './components/library/LibraryView';
 
 export function App() {
-  const { setPlaybackState, addToPlaylist, playAtIndex, playlist, status, streamUrl } = useMediaPlayerStore();
+  const { addToPlaylist, playAtIndex, playlist, status, streamUrl, loadPlaylist } = useMediaPlayerStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   
   useEffect(() => {
-    // Subscribe to playback state changes from Main process
-    // Removed legacy IPC subscriptions since we handle local playback
-    // But we might want to keep global shortcuts sync later
+    // Load persisted playlist
+    loadPlaylist();
   }, []);
   
   const handleOpenFiles = async () => {
