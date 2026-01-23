@@ -10,6 +10,7 @@ interface AppSettings {
 interface StoreData {
    settings: AppSettings;
    jobHistory: Job[];
+   playbackPositions: Record<string, number>;
 }
 
 export class SettingsService {
@@ -37,7 +38,8 @@ export class SettingsService {
          settings: {
             downloadsPath: path.join(app.getPath('videos'), 'GingerPlayer')
          },
-         jobHistory: []
+         jobHistory: [],
+         playbackPositions: {}
       };
    }
 
@@ -81,5 +83,18 @@ export class SettingsService {
    clearHistory() {
       this.data.jobHistory = [];
       this.saveData();
+   }
+
+   savePlaybackPosition(mediaId: string, position: number) {
+      this.data.playbackPositions[mediaId] = position;
+      // We don't save to disk on every single sync-time to avoid IO overhead.
+      // But we should save it eventually.
+      // Actually settings.json is small, but maybe only save every 10 secs?
+      // For now, let's just save.
+      this.saveData();
+   }
+
+   getPlaybackPosition(mediaId: string): number {
+      return this.data.playbackPositions[mediaId] || 0;
    }
 }

@@ -6,12 +6,15 @@ export type RepeatMode = 'off' | 'one' | 'all';
 
 export interface MediaSource {
   id: string;
-  type: 'local' | 'remote';
+  type: 'local' | 'remote' | 'network';
+  networkType?: 'dlna' | 'smb';
+  networkServerId?: string;
   path: string;
   title?: string;
   artist?: string;
   album?: string;
   duration?: number;
+  isDirectory?: boolean;
 }
 
 export interface PlaybackState {
@@ -87,4 +90,22 @@ export interface MediaMetadata {
     sampleRate: number;
   };
   tags?: Record<string, string>;
+}
+
+export interface NetworkServer {
+  id: string;
+  name: string;
+  type: 'dlna' | 'smb';
+  address: string; // IP or hostname
+  port?: number;
+  icon?: string;
+  location?: string; // DIDL URL or parsed location
+  requiresAuth?: boolean;
+}
+
+export interface SMBConfig {
+  share: string; // \\HOST\SHARE
+  domain?: string;
+  username?: string;
+  password?: string;
 }

@@ -5,18 +5,21 @@ import { Server } from 'http';
 import fs from 'fs';
 import { TranscoderService } from './Transcoder';
 import { MediaMetadataService } from './MediaMetadata';
+import { NetworkManager } from './network/NetworkManager';
 
 export class MediaServer {
   private app: express.Express;
   private server: Server | null = null;
   private port = 0;
   private transcoder: TranscoderService;
+  private networkManager?: NetworkManager;
   private metadataService: MediaMetadataService;
 
-  constructor(ffmpegPath?: string, ffprobePath?: string) {
+  constructor(ffmpegPath?: string, ffprobePath?: string, networkManager?: NetworkManager) {
     this.app = express();
     this.transcoder = new TranscoderService(ffmpegPath);
     this.metadataService = new MediaMetadataService(ffprobePath);
+    this.networkManager = networkManager;
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -25,7 +28,7 @@ export class MediaServer {
   private setupMiddleware() {
     this.app.use(cors());
     // Basic request logging
-    this.app.use((req, res, next) => {
+    this.app.use((req, _res, next) => {
       console.log(`[MediaServer] ${req.method} ${req.url}`);
       next();
     });
@@ -127,6 +130,45 @@ export class MediaServer {
       req.on('close', () => {
         command.kill('SIGKILL');
       });
+    });
+
+    // 5. Network Proxy (SMB/DLNA)
+    this.app.get('/proxy', async (req, res) => {
+      const url = req.query.url as string;
+      if (!url || !this.networkManager) {
+        res.status(400).send('URL required or NetworkManager not init');
+        return;
+      }
+
+      try {
+        // Assume SMB for now if using proxy, or detect scheme
+        // Typically DLNA gives HTTP URLs which renderer can play directly.
+        // SMB needs proxy.
+        // We pass the path relative to current SMB connection.
+        
+        const stream = await this.networkManager.getSMBStream(url);
+        
+        // Guess content type or use default
+        res.setHeader('Content-Type', 'application/octet-stream');
+        
+        stream.pipe(res);
+        
+        stream.on('error', (err) => {
+            console.error('[MediaServer] Proxy stream error:', err);
+            if (!res.headersSent) res.status(500).end();
+        });
+        
+        req.on('close', () => {
+            // stream.destroy? Readable stream might not have destroy in all versions but usually yes.
+            if (typeof (stream as any).destroy === 'function') {
+                (stream as any).destroy();
+            }
+        });
+
+      } catch (err) {
+        console.error('[MediaServer] Proxy error:', err);
+        res.status(500).send('Proxy failed');
+      }
     });
   }
 

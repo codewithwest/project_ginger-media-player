@@ -126,17 +126,19 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
     try {
       const url = await window.electronAPI.media.getStreamUrl(item.path);
       const metadata = await window.electronAPI.media.getMetadata(item.path);
+      const resumePos = await window.electronAPI.media.getResumePosition(item.id);
 
       set({
         currentSource: item,
         currentIndex: index,
         streamUrl: url,
         metadata: metadata,
-        duration: metadata.duration || 0
+        duration: metadata.duration || 0,
+        // Only resume if more than 5 seconds in and not at the very end
+        position: (resumePos > 5 && resumePos < (metadata.duration || 0) - 10) ? resumePos : 0
       });
 
       // Only tell Main to play if we aren't already syncing from a play command
-      // Actually, playAtIndex in renderer should just load the URL and then the <video> tag handles the rest.
     } catch (err) {
       console.error("[MediaPlayer] Failed to load at index", index, err);
     }

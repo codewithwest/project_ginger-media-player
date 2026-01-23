@@ -2,8 +2,9 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import { MediaSource, RepeatMode, PlaybackState } from '../../shared/types/media';
 import { PlaylistService } from './PlaylistService';
+import { EventEmitter } from 'events';
 
-export class PlaybackService {
+export class PlaybackService extends EventEmitter {
    private state: PlaybackState = {
       status: 'stopped',
       currentSource: null,
@@ -18,6 +19,7 @@ export class PlaybackService {
    private currentIndex = -1;
 
    constructor(private mainWindow: BrowserWindow, private playlistService: PlaylistService) {
+      super();
       this.playlist = this.playlistService.load();
       this.initHandlers();
    }
@@ -173,6 +175,11 @@ export class PlaybackService {
             currentIndex: this.currentIndex
          });
       }
+      this.emit('state-changed', {
+         ...this.state,
+         playlist: this.playlist,
+         currentIndex: this.currentIndex
+      });
    }
 
    public getState() {

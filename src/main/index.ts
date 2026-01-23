@@ -12,10 +12,13 @@ import { JobManager } from './services/JobManager';
 import { ConversionService } from './services/ConversionService';
 import { DownloadService } from './services/DownloadService';
 import { LibraryService } from './services/LibraryService';
+import { MediaPlayerState } from '../shared/types/media';
 import { PlaylistService } from './services/PlaylistService';
 import { UpdateService } from './services/UpdateService';
 import { ReleaseService } from './services/ReleaseService';
 import { SettingsService } from './services/SettingsService';
+import { NetworkManager } from './services/network/NetworkManager';
+import { PluginService } from './services/PluginService';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -31,6 +34,8 @@ let libraryService: LibraryService | null = null;
 let playlistService: PlaylistService | null = null;
 let updateService: UpdateService | null = null;
 let settingsService: SettingsService | null = null;
+let networkManager: NetworkManager | null = null;
+let pluginService: PluginService | null = null;
 
 function handleCommandLineArgs(argv: string[]) {
   const args = argv.slice(app.isPackaged ? 1 : 2);
@@ -122,7 +127,20 @@ async function registerIpcHandlers(): Promise<void> {
   // Initialize Services
   settingsService = new SettingsService();
   playlistService = new PlaylistService();
+  pluginService = new PluginService();
   playbackService = new PlaybackService(mainWindow as BrowserWindow, playlistService);
+  
+  // Broadcast events to plugins
+  playbackService.on('state-changed', (state: MediaPlayerState) => {
+    pluginService?.broadcastEvent('playback:state-changed', state);
+  });
+
+  // Network Event Listeners
+  if (networkManager) {
+    networkManager.onServerFound((server) => {
+      mainWindow?.webContents.send('network:server-found', server);
+    });
+  }
 
   const jobManager = new JobManager(mainWindow as BrowserWindow, settingsService);
   const ffmpegPath = downloadService?.getFFmpegPath();
@@ -168,6 +186,18 @@ async function registerIpcHandlers(): Promise<void> {
 
   ipcMain.handle('library:get-folders', async () => {
     return libraryService?.getFolders();
+  });
+
+  // Resume Playback
+  ipcMain.on('playback:sync-time', (_event, { position }) => {
+    const currentState = playbackService?.getState();
+    if (currentState?.currentSource?.id) {
+        settingsService?.savePlaybackPosition(currentState.currentSource.id, position);
+    }
+  });
+
+  ipcMain.handle('media:get-resume-position', async (_event, { mediaId }) => {
+    return settingsService?.getPlaybackPosition(mediaId) || 0;
   });
 
   // Media Engine Handlers
@@ -291,6 +321,32 @@ async function registerIpcHandlers(): Promise<void> {
   downloadService?.init().catch(err => {
     console.error('Failed to initialize DownloadService in background:', err);
   });
+
+  // Network Handlers
+  ipcMain.handle('network:scan-start', () => {
+    networkManager?.startDiscovery();
+  });
+
+  ipcMain.handle('network:scan-stop', () => {
+    networkManager?.stopDiscovery();
+  });
+
+  ipcMain.handle('network:get-servers', () => {
+    return networkManager?.getServers() || [];
+  });
+
+  ipcMain.handle('network:browse', async (_event, { server, path }) => {
+    try {
+      return await networkManager?.browse(server, path);
+    } catch (e: unknown) {
+      console.error('Network browse error:', e);
+      throw e;
+    }
+  });
+
+  ipcMain.handle('network:connect-smb', async (_event, config) => {
+    await networkManager?.connectSMB(config);
+  });
 }
 
 function registerGlobalShortcuts(): void {
@@ -333,9 +389,17 @@ if (!gotTheLock) {
   // Only start the app if we have the lock
   app.on('ready', async () => {
     downloadService = new DownloadService();
+    // NetworkManager is created in registerIpcHandlers to attach listeners to mainWindow...
+    // But MediaServer needs it. So we should create it here?
+    // Or pass it later? MediaServer constructor expects it optional.
+    // Ideally we create services in one place.
+    // Let's create NetworkManager here.
+    
+    networkManager = new NetworkManager();
     mediaServer = new MediaServer(
       downloadService.getFFmpegPath(),
-      downloadService.getFFprobePath()
+      downloadService.getFFprobePath(),
+      networkManager
     );
 
     try {
@@ -348,6 +412,11 @@ if (!gotTheLock) {
     createWindow();
     await registerIpcHandlers();
     registerGlobalShortcuts();
+
+    // Async init plugins
+    pluginService?.init().catch(err => {
+      console.error('[Main] Failed to init plugins:', err);
+    });
 
     mainWindow?.webContents.on('did-finish-load', () => {
       handleCommandLineArgs(process.argv);

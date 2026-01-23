@@ -5,7 +5,8 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi } from 'lucide-react';
+import { NetworkView } from './components/network/NetworkView';
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { JobDashboard } from './components/jobs/JobDashboard';
@@ -23,7 +24,10 @@ export function App() {
   const { syncJobs, initializeListeners } = useJobsStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+
   const [showReleases, setShowReleases] = useState(false);
+
+  const [showNetwork, setShowNetwork] = useState(false);
   const [showEqualizer, setShowEqualizer] = useState(false);
   const [showQueue, setShowQueue] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -128,6 +132,13 @@ export function App() {
             <FileText className="w-4 h-4" />
           </button>
           <button
+            onClick={() => setShowNetwork(!showNetwork)}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showNetwork ? 'text-primary-400 bg-white/5' : 'text-gray-400'}`}
+            title="Network Media"
+          >
+            <Wifi className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => setShowQueue(!showQueue)}
             className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showQueue ? 'text-indigo-400 bg-white/5' : 'text-gray-400'}`}
             title="Toggle Queue"
@@ -143,6 +154,7 @@ export function App() {
           {/* Overlays */}
           {showLibrary && <LibraryView onClose={() => setShowLibrary(false)} />}
           {showReleases && <ReleasesView onClose={() => setShowReleases(false)} />}
+          {showNetwork && <NetworkView onClose={() => setShowNetwork(false)} />}
           {showJobs && <JobDashboard onClose={() => setShowJobs(false)} />}
           {showEqualizer && <Equalizer onClose={() => setShowEqualizer(false)} />}
 

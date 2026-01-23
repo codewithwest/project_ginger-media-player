@@ -13,6 +13,10 @@ import type {
   AppSettings,
   UpdateStatus,
   UpdateProgress,
+
+  NetworkServer,
+  MediaSource,
+  SMBConfig,
 } from '@shared/types';
 
 // Create type-safe API
@@ -61,6 +65,7 @@ const electronAPI = {
       return () => { ipcRenderer.removeListener('playback:state-changed', subscription); };
     },
     getState: (): Promise<MediaPlayerState> => ipcRenderer.invoke('playback:get-state'),
+    getResumePosition: (mediaId: string): Promise<number> => ipcRenderer.invoke('media:get-resume-position', { mediaId }),
   },
 
   // File operations
@@ -140,6 +145,22 @@ const electronAPI = {
       const subscription = (_event: IpcRendererEvent, data: UpdateProgress) => callback(data);
       ipcRenderer.on('update:progress', subscription);
       return () => { ipcRenderer.removeListener('update:progress', subscription); };
+    },
+  },
+
+
+  
+  // Network
+  network: {
+    scanStart: (): Promise<void> => ipcRenderer.invoke('network:scan-start'),
+    scanStop: (): Promise<void> => ipcRenderer.invoke('network:scan-stop'),
+    getServers: (): Promise<NetworkServer[]> => ipcRenderer.invoke('network:get-servers'),
+    browse: (server: NetworkServer, path?: string): Promise<MediaSource[]> => ipcRenderer.invoke('network:browse', { server, path }),
+    connectSMB: (config: SMBConfig): Promise<void> => ipcRenderer.invoke('network:connect-smb', config),
+    onServerFound: (callback: (server: NetworkServer) => void) => {
+        const subscription = (_event: IpcRendererEvent, server: NetworkServer) => callback(server);
+        ipcRenderer.on('network:server-found', subscription);
+        return () => { ipcRenderer.removeListener('network:server-found', subscription); };
     },
   },
 
