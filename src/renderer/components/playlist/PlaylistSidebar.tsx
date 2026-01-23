@@ -186,10 +186,9 @@ export function PlaylistSidebar() {
                   <Play className={`w-3 h-3 text-white hidden group-hover:block ${isActive ? 'hidden' : ''} fill-current`} />
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-semibold truncate ${isActive ? 'text-primary-400' : 'text-gray-300 group-hover:text-white'}`}>
-                    {item.title || item.path.split('/').pop()}
+                    {item.title || item.path?.split('/').pop() || 'Unknown Track'}
                   </p>
                   <p className="text-[10px] text-gray-500 group-hover:text-gray-400 truncate uppercase tracking-wider font-medium">
                     {item.artist || 'Unknown Artist'}

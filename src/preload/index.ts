@@ -5,28 +5,36 @@ import type { IpcRequest, IpcResponse, IpcEventData } from '@shared/types';
 
 // Create type-safe API
 const electronAPI = {
-  // Media controls
+  // Media controls (backed by PlaybackService in Main)
   media: {
-    play: (sourceId: string): Promise<void> =>
-      ipcRenderer.invoke('media:play', { sourceId }),
+    play: (index?: number): Promise<void> =>
+      ipcRenderer.invoke('playback:play', index),
     pause: (): Promise<void> =>
-      ipcRenderer.invoke('media:pause'),
+      ipcRenderer.invoke('playback:pause'),
     stop: (): Promise<void> =>
-      ipcRenderer.invoke('media:stop'),
+      ipcRenderer.invoke('playback:stop'),
     seek: (position: number): Promise<void> =>
-      ipcRenderer.invoke('media:seek', { position }),
+      ipcRenderer.invoke('playback:seek', position),
     setVolume: (volume: number): Promise<void> =>
-      ipcRenderer.invoke('media:set-volume', { volume }),
+      ipcRenderer.invoke('playback:set-volume', volume),
     next: (): Promise<void> =>
-      ipcRenderer.invoke('media:next'),
+      ipcRenderer.invoke('playback:next'),
     previous: (): Promise<void> =>
-      ipcRenderer.invoke('media:previous'),
-    toggleShuffle: (): Promise<void> =>
-      ipcRenderer.invoke('media:toggle-shuffle'),
-    toggleRepeat: (): Promise<void> =>
-      ipcRenderer.invoke('media:toggle-repeat'),
+      ipcRenderer.invoke('playback:previous'),
+    setShuffle: (shuffle: boolean): Promise<void> =>
+      ipcRenderer.invoke('playback:set-shuffle', shuffle),
+    setRepeat: (repeat: string): Promise<void> =>
+      ipcRenderer.invoke('playback:set-repeat', repeat),
+    addToPlaylist: (item: any, playNow?: boolean): Promise<void> =>
+      ipcRenderer.invoke('playback:add-to-playlist', { item, playNow }),
+    clearPlaylist: (): Promise<void> =>
+      ipcRenderer.invoke('playback:clear-playlist'),
 
-    // Media Engine
+    // Sync position from Renderer to Main
+    syncTime: (position: number, duration?: number) =>
+      ipcRenderer.send('playback:sync-time', { position, duration }),
+
+    // Media Engine (Main process services)
     getStreamUrl: (filePath: string): Promise<string> =>
       ipcRenderer.invoke('media:get-stream-url', { filePath }),
     getMetadata: (filePath: string): Promise<any> =>
@@ -35,16 +43,12 @@ const electronAPI = {
       ipcRenderer.invoke('media:get-subtitles-url', { filePath }),
 
     // Event listeners
-    onStateChanged: (callback: (state: IpcEventData<'media:state-changed'>) => void) => {
-      const subscription = (_event: IpcRendererEvent, data: IpcEventData<'media:state-changed'>) => callback(data);
-      ipcRenderer.on('media:state-changed', subscription);
-      return () => { ipcRenderer.removeListener('media:state-changed', subscription); };
+    onStateChanged: (callback: (state: any) => void) => {
+      const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
+      ipcRenderer.on('playback:state-changed', subscription);
+      return () => { ipcRenderer.removeListener('playback:state-changed', subscription); };
     },
-    onProgress: (callback: (data: IpcEventData<'media:progress'>) => void) => {
-      const subscription = (_event: IpcRendererEvent, data: IpcEventData<'media:progress'>) => callback(data);
-      ipcRenderer.on('media:progress', subscription);
-      return () => { ipcRenderer.removeListener('media:progress', subscription); };
-    },
+    getState: (): Promise<any> => ipcRenderer.invoke('playback:get-state'),
   },
 
   // File operations

@@ -12,6 +12,23 @@ Total control over your sound signature.
 - **Glassmorphic Precision**: A dedicated, sleek EQ panel with high-precision sliders and real-time dB feedback.
 - **One-Click Reset**: Quickly return to a flat response with the new reset functionality.
 
+## 🎨 Library Enhancements
+- **Grid/List Toggle**: Switch between grid and list views for your media library with a single click.
+- **One-Click Conversion**: Convert any video to MP3 directly from the library with the new convert button.
+- **Auto-Rescan**: Library automatically rescans after conversions to show new files.
+- **Instant Playback**: Play button now starts tracks immediately instead of just adding to queue.
+
+## 🎧 Background Playback Architecture
+- **Main Process Ownership**: Playback state now lives in the Main process, enabling true background playback.
+- **Survive Window Reload**: Your music keeps playing even if you reload or hide the window.
+- **System Tray Controls**: Control playback from the system tray with Play/Pause, Next, and Previous.
+- **Global Media Keys**: Use your keyboard's media keys to control Ginger from any application.
+
+## 🐛 Bug Fixes
+- **Fixed PlaylistSidebar Crash**: Added null safety checks to prevent undefined errors.
+- **Fixed Job History**: Completed downloads and conversions now have working play buttons.
+- **Fixed Library Play**: Play button in library now correctly starts playback immediately.
+
 ## 🛠️ Performance & Audio Engine
 - **Web Audio Integration**: Rewrote the audio pipeline to use the Web Audio API for low-latency processing and filtering.
 - **Hardware Acceleration**: Componentized the visualizer using HTML5 Canvas for smooth 60FPS rendering without taxing the CPU.

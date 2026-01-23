@@ -13,19 +13,19 @@ export class TrayService {
     // Attempt to find an icon
     const iconPath = this.getIconPath();
     const icon = nativeImage.createFromPath(iconPath);
-    
+
     // Fallback if no icon found? Electron might show transparent or default
     // On Linux/Windows, we really need an icon.
-    
+
     this.tray = new Tray(icon);
     this.tray.setToolTip('Ginger Media Player');
-    
+
     this.updateContextMenu();
-    
+
     this.tray.on('double-click', () => {
       this.toggleWindow();
     });
-    
+
     this.tray.on('click', () => {
       this.toggleWindow();
     });
@@ -43,16 +43,33 @@ export class TrayService {
     if (!this.tray) return;
 
     const contextMenu = Menu.buildFromTemplate([
-      { 
-        label: 'Show/Hide', 
-        click: () => this.toggleWindow() 
+      {
+        label: 'Show/Hide',
+        click: () => this.toggleWindow()
       },
       { type: 'separator' },
-      { 
-        label: 'Quit', 
+      {
+        label: 'Play / Pause',
+        click: () => {
+          // We will emit an IPC message or call service directly
+          // For now, let's assume we can emit to renderer or call main service
+          app.emit('playback:toggle');
+        }
+      },
+      {
+        label: 'Next',
+        click: () => app.emit('playback:next')
+      },
+      {
+        label: 'Previous',
+        click: () => app.emit('playback:previous')
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit',
         click: () => {
           app.quit();
-        } 
+        }
       }
     ]);
 

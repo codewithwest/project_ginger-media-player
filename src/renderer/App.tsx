@@ -25,8 +25,8 @@ export function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    // Load persisted playlist
-    loadPlaylist();
+    // Initialize Media Player (Sync with Main Process)
+    useMediaPlayerStore.getState().init();
 
     // Check for updates
     const cleanStatus = window.electronAPI.update.onStatusChange(({ status }) => {

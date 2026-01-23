@@ -109,17 +109,22 @@ const createWindow = (): void => {
   trayService.createTray();
 };
 
+import { PlaybackService } from './services/PlaybackService';
+
+let playbackService: PlaybackService | null = null;
+
 async function registerIpcHandlers(): Promise<void> {
   // Initialize Services
   settingsService = new SettingsService();
+  playlistService = new PlaylistService();
+  playbackService = new PlaybackService(mainWindow!, playlistService);
+
   const jobManager = new JobManager(mainWindow!, settingsService);
   const ffmpegPath = downloadService?.getFFmpegPath();
   const ffprobePath = downloadService?.getFFprobePath();
 
   const conversionService = new ConversionService(ffmpegPath);
-  // downloadService is now initialized in app.on('ready')
   libraryService = new LibraryService(ffprobePath);
-  playlistService = new PlaylistService();
   updateService = new UpdateService(mainWindow!);
   new ReleaseService();
 
@@ -127,15 +132,6 @@ async function registerIpcHandlers(): Promise<void> {
   if (downloadService) {
     jobManager.registerService('download', downloadService);
   }
-
-  // Playlist Persistence
-  ipcMain.handle('playlist:save', async (_event, { playlist }) => {
-    playlistService?.save(playlist);
-  });
-
-  ipcMain.handle('playlist:load', async () => {
-    return playlistService?.load();
-  });
 
   // Library Management
   ipcMain.handle('library:add-folder', async (_event, { path }) => {
@@ -292,11 +288,15 @@ async function registerIpcHandlers(): Promise<void> {
 
 function registerGlobalShortcuts(): void {
   globalShortcut.register('MediaPlayPause', () => {
-    // TODO: Toggle playback via IPC to renderer if possible or main-controlled
-    console.log('Media Play/Pause pressed');
+    playbackService?.toggle();
   });
-  globalShortcut.register('MediaNextTrack', () => console.log('Media Next'));
-  globalShortcut.register('MediaPreviousTrack', () => console.log('Media Previous'));
+  globalShortcut.register('MediaNextTrack', () => playbackService?.next());
+  globalShortcut.register('MediaPreviousTrack', () => playbackService?.previous());
+
+  // Listen for signals from Tray or other modules
+  app.on('playback:toggle' as any, () => playbackService?.toggle());
+  app.on('playback:next' as any, () => playbackService?.next());
+  app.on('playback:previous' as any, () => playbackService?.previous());
 }
 
 if (!gotTheLock) {

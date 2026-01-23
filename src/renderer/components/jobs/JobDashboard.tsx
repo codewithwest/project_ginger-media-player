@@ -47,14 +47,8 @@ export function JobDashboard({ onClose }: JobDashboardProps) {
                title: job.title || filePath.split('/').pop() || 'Downloaded Media'
             };
 
-            console.log(`[JobDashboard] Adding to playlist:`, newItem);
-            addToPlaylist(newItem);
-
-            // Ensure we play the item we just added
-            setTimeout(() => {
-               const currentPlaylist = useMediaPlayerStore.getState().playlist;
-               playAtIndex(currentPlaylist.length - 1);
-            }, 100);
+            console.log(`[JobDashboard] Adding to playlist and playing:`, newItem);
+            addToPlaylist(newItem, true); // Play immediately
 
             onClose();
          } else {

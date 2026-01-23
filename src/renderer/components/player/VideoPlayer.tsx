@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { useMediaPlayerStore } from '../../state/media-player';
 import { useAudioEngine } from '../../state/audio-engine';
@@ -11,9 +12,11 @@ export function VideoPlayer() {
     status,
     volume,
     position,
-    setPlaybackState,
+    syncTime,
     play,
     pause,
+    next,
+    currentSource
   } = useMediaPlayerStore();
 
   // Sync Play/Pause/Stop status
@@ -52,16 +55,13 @@ export function VideoPlayer() {
   // Handle events from Video Element
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setPlaybackState({ position: videoRef.current.currentTime });
+      syncTime(videoRef.current.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setPlaybackState({
-        duration: videoRef.current.duration
-      });
-      // If we were supposed to be playing, ensure we play
+      syncTime(videoRef.current.currentTime, videoRef.current.duration);
       if (status === 'playing') {
         videoRef.current.play().catch(e => console.error("Auto-play failed", e));
       }
@@ -69,14 +69,20 @@ export function VideoPlayer() {
   };
 
   const handleEnded = () => {
-    setPlaybackState({ status: 'stopped', position: 0 });
+    next();
   };
 
-  if (!streamUrl) return null;
+  const handleError = (e: any) => {
+    const error = e.target.error;
+    console.error("Video player error:", {
+      code: error?.code,
+      message: error?.message,
+      src: videoRef.current?.src
+    });
+  };
 
   /* New state for subtitles */
   const [subtitleUrl, setSubtitleUrl] = useState<string | null>(null);
-  const { currentSource } = useMediaPlayerStore(); // Need access to the source file path
 
   useEffect(() => {
     async function loadSubtitles() {
@@ -95,17 +101,6 @@ export function VideoPlayer() {
     loadSubtitles();
   }, [currentSource?.path]);
 
-  // ... previous effects ...
-
-  const handleError = (e: any) => {
-    const error = e.target.error;
-    console.error("Video player error:", {
-      code: error?.code,
-      message: error?.message,
-      src: videoRef.current?.src
-    });
-  };
-
   const initAudio = useAudioEngine(state => state.init);
 
   useEffect(() => {
@@ -114,10 +109,12 @@ export function VideoPlayer() {
     }
   }, [initAudio]);
 
+  if (!streamUrl) return null;
+
   return (
     <div className="w-full h-full flex items-center justify-center bg-transparent overflow-hidden relative group">
       {/* Background/Visualizer layer */}
-      {!currentSource?.path?.toLowerCase().endsWith('.mp4') && (
+      {currentSource?.path && !currentSource.path.toLowerCase().endsWith('.mp4') && (
         <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
           <Visualizer />
         </div>
@@ -145,7 +142,7 @@ export function VideoPlayer() {
         )}
       </video>
 
-      {/* Dynamic Overlay Visualizer for videos too? Maybe just at the bottom */}
+      {/* Bottom Visualizer Strip */}
       <div className="absolute bottom-0 inset-x-0 h-16 opacity-50 pointer-events-none z-20">
         <Visualizer />
       </div>
