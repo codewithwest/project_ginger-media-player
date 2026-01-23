@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity, Music, FileText } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic } from 'lucide-react';
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { JobDashboard } from './components/jobs/JobDashboard';
@@ -19,6 +19,7 @@ export function App() {
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [showReleases, setShowReleases] = useState(false);
+  const [showQueue, setShowQueue] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
@@ -32,7 +33,9 @@ export function App() {
         setUpdateAvailable(true);
       }
       if (status === 'downloaded') {
-        const confirm = window.confirm('Update downloaded. Restart now?');
+        // Since autoDownload is true, it will reach here automatically when done.
+        setUpdateAvailable(false); // Hide the banner if it was showing
+        const confirm = window.confirm('Updates are ready to install. Restart Ginger now?');
         if (confirm) window.electronAPI.update.installUpdate();
       }
     });
@@ -55,24 +58,15 @@ export function App() {
   const handleOpenFiles = async () => {
     const files = (await window.electronAPI.file.openDialog()) as string[];
     if (files && files.length > 0) {
-      console.log('Opening files:', files);
-
       const newItems = files.map((filePath: string) => ({
-        id: filePath, // Using path as ID for now
+        id: filePath,
         type: 'local' as const,
         path: filePath,
         title: filePath.split('/').pop()
       }));
-
-      // Add all to playlist
       newItems.forEach(item => addToPlaylist(item));
-
-      // If not playing, start playing the first new item
       if (status === 'stopped' || playlist.length === 0) {
-        // We need the index of the first added item. 
-        // If playlist was empty, it's 0. If it had items, it's old length.
-        const startIndex = playlist.length;
-        playAtIndex(startIndex);
+        playAtIndex(playlist.length);
       }
     }
   };
@@ -80,67 +74,67 @@ export function App() {
   // Handle CLI file opening
   useEffect(() => {
     const cleanup = window.electronAPI.file.onFileOpenFromCLI(async (filePath: string) => {
-      console.log('Received file from CLI:', filePath);
-      const isUrl = filePath.startsWith('http');
-      console.log('Is URL:', isUrl);
-
       const newItem = {
         id: filePath,
-        type: 'local' as const, // or 'url'
+        type: 'local' as const,
         path: filePath,
         title: filePath.split('/').pop() || filePath
       };
-
       useMediaPlayerStore.getState().addToPlaylist(newItem);
       const state = useMediaPlayerStore.getState();
-      const index = state.playlist.length - 1; // It was just added
-      state.playAtIndex(index);
+      state.playAtIndex(state.playlist.length - 1);
     });
-
     return cleanup;
   }, []);
 
   return (
-    <div className="h-screen w-screen bg-[#0a0a0a] text-white flex flex-col overflow-hidden font-sans selection:bg-blue-500/30">
+    <div className="h-screen w-screen bg-[#030303] text-[#e5e7eb] flex flex-col overflow-hidden font-sans selection:bg-blue-500/30">
       {/* Three.js Background */}
       <Background3D />
 
       {/* Title Bar - Draggable */}
-      <div className="h-8 w-full bg-black/40 flex items-center px-4 select-none" style={{ WebkitAppRegion: 'drag' } as any}>
-        <div className="text-xs font-medium text-gray-400 tracking-wider">GINGER</div>
+      <div className="h-10 w-full glass flex items-center px-4 select-none z-50" style={{ WebkitAppRegion: 'drag' } as any}>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+          <div className="text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase">Ginger Media</div>
+        </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
+        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as any}>
           <button
             onClick={() => setShowLibrary(!showLibrary)}
-            className={`p-1 rounded hover:bg-white/10 ${showLibrary ? 'text-indigo-400' : 'text-gray-400'}`}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showLibrary ? 'text-primary-400 bg-white/5' : 'text-gray-400'}`}
             title="Library"
           >
             <Music className="w-4 h-4" />
           </button>
           <button
             onClick={() => setShowJobs(!showJobs)}
-            className={`p-1 rounded hover:bg-white/10 ${showJobs ? 'text-blue-400' : 'text-gray-400'}`}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showJobs ? 'text-blue-400 bg-white/5' : 'text-gray-400'}`}
             title="Show Jobs"
           >
             <Activity className="w-4 h-4" />
           </button>
           <button
             onClick={() => setShowReleases(!showReleases)}
-            className={`p-1 rounded hover:bg-white/10 ${showReleases ? 'text-indigo-400' : 'text-gray-400'}`}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showReleases ? 'text-indigo-400 bg-white/5' : 'text-gray-400'}`}
             title="Release Notes"
           >
             <FileText className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => setShowQueue(!showQueue)}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showQueue ? 'text-indigo-400 bg-white/5' : 'text-gray-400'}`}
+            title="Toggle Queue"
+          >
+            <ListMusic className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Playlist Sidebar */}
-        <PlaylistSidebar />
-
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col relative bg-gradient-to-br from-gray-900 to-black">
-          {/* Library Overlay */}
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          {/* Library Overlays */}
           {showLibrary && <LibraryView onClose={() => setShowLibrary(false)} />}
           {showReleases && <ReleasesView onClose={() => setShowReleases(false)} />}
           {showJobs && <JobDashboard onClose={() => setShowJobs(false)} />}
@@ -148,23 +142,32 @@ export function App() {
           {/* Main Stage (Player) */}
           <div className="flex-1 relative flex items-center justify-center overflow-hidden">
             {streamUrl ? (
-              <VideoPlayer key={streamUrl} />
+              <div className="w-full h-full animate-fade-in">
+                <VideoPlayer key={streamUrl} />
+              </div>
             ) : (
-              /* Placeholder */
-              <div className="flex flex-col items-center gap-6 mb-8 z-10">
-                <div className="w-48 h-48 rounded-2xl bg-dark-surface flex items-center justify-center shadow-2xl">
-                  <Disc3 className="w-24 h-24 text-primary-500 animate-spin-slow" />
+              /* Premium Placeholder */
+              <div className="flex flex-col items-center gap-8 mb-12 z-10 animate-fade-in">
+                <div className="relative group">
+                  <div className="absolute -inset-4 bg-primary-500/20 rounded-full blur-2xl group-hover:bg-primary-500/30 transition-all duration-500" />
+                  <div className="w-56 h-56 rounded-3xl glass flex items-center justify-center shadow-2xl relative">
+                    <Disc3 className="w-28 h-28 text-primary-500 animate-spin-slow" />
+                  </div>
                 </div>
 
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-1">No Track Playing</h2>
-                  <p className="text-gray-400">Open a file to get started</p>
-                  <div className="mt-4">
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent">
+                    Ready for Music?
+                  </h2>
+                  <p className="text-gray-500 text-sm max-w-[240px] mx-auto leading-relaxed">
+                    Select a track from your library or drop files here to begin your experience.
+                  </p>
+                  <div className="pt-6">
                     <button
                       onClick={handleOpenFiles}
-                      className="group flex items-center gap-2 px-4 py-2 bg-dark-elevated hover:bg-dark-border rounded-lg text-sm text-gray-300 transition-all duration-200 border border-white/5 hover:border-white/10"
+                      className="group flex items-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-500 rounded-2xl text-sm font-semibold text-white transition-all duration-300 shadow-lg shadow-primary-900/40 hover:scale-105 active:scale-95"
                     >
-                      <FolderOpen className="w-4 h-4 text-primary-500 group-hover:scale-110 transition-transform" />
+                      <FolderOpen className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                       <span>Open Media</span>
                     </button>
                   </div>
@@ -174,33 +177,48 @@ export function App() {
           </div>
         </div>
 
-        {/* Modal overlays are now handled above */}
+        {/* Playlist Sidebar - Floating / Sliding */}
+        <div
+          className={`
+            absolute top-0 right-0 bottom-0 z-40 transition-all duration-500 ease-in-out
+            ${showQueue ? 'w-80 translate-x-0' : 'w-0 translate-x-full opacity-0 pointer-events-none'}
+          `}
+        >
+          <div className="h-full w-80 glass-dark border-l border-white/5">
+            <PlaylistSidebar />
+          </div>
+        </div>
       </div>
 
       {/* Update Notification */}
       {updateAvailable && (
-        <div className="absolute bottom-24 right-6 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 flex flex-col gap-2 animate-bounce-in">
-          <div className="font-bold">Update Available</div>
-          <div className="text-xs opacity-80">A new version is ready to verify.</div>
-          <button
-            onClick={() => window.electronAPI.update.downloadUpdate()}
-            className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold mt-1 hover:bg-gray-100"
-          >
-            Download
-          </button>
-          <button
-            onClick={() => setUpdateAvailable(false)}
-            className="text-xs text-white/50 hover:text-white mt-1"
-          >
-            Dismiss
-          </button>
+        <div className="absolute bottom-28 right-8 glass-dark p-1 rounded-2xl shadow-2xl z-[60] animate-fade-in">
+          <div className="bg-primary-600/10 p-4 rounded-xl border border-primary-500/20 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary-500 rounded-lg">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="font-bold text-sm">New Update Ready</div>
+                <div className="text-[10px] text-gray-400">Downloading the latest improvements...</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setUpdateAvailable(false)}
+                className="flex-1 text-[10px] font-bold text-gray-400 hover:text-white transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Footer / Controls overlay logic ... */}
-      <div className="h-24 bg-gradient-to-t from-black via-black/90 to-transparent absolute bottom-0 inset-x-0 z-30 pointer-events-none">
-        <div className="w-full h-full flex items-center px-6 pointer-events-auto">
-          <PlayerControls />
+      {/* Bottom Controls */}
+      <div className="h-28 glass-dark border-t border-white/5 relative z-50">
+        <div className="max-w-7xl mx-auto h-full flex items-center px-8">
+          <PlayerControls onToggleQueue={() => setShowQueue(!showQueue)} queueVisible={showQueue} />
         </div>
       </div>
     </div>

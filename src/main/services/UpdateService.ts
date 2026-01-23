@@ -8,10 +8,10 @@ export class UpdateService {
     log.initialize();
     autoUpdater.logger = log;
     (autoUpdater.logger as any).transports.file.level = 'info';
-    
+
     // Disable auto-download to give user control, or enable if preferred.
     // Let's enable auto-download for seamless experience but notify user.
-    autoUpdater.autoDownload = false; 
+    autoUpdater.autoDownload = true;
 
     this.initListeners();
   }

@@ -259,6 +259,14 @@ async function registerIpcHandlers(): Promise<void> {
     mainWindow?.close();
   });
 
+  ipcMain.handle('window:toggle-full-screen', async () => {
+    if (mainWindow) {
+      const isFullScreen = mainWindow.isFullScreen();
+      mainWindow.setFullScreen(!isFullScreen);
+      // Also hide/show title bar if necessary, but Electron's setFullScreen handles this usually.
+    }
+  });
+
   // Update Management
   ipcMain.handle('update:check', () => {
     updateService?.checkForUpdates();

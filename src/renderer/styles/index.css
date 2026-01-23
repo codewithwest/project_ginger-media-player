@@ -10,10 +10,13 @@
   --color-primary-700: #0369a1;
   --color-primary-900: #0c4a6e;
 
-  --color-dark-bg: #0a0a0a;
-  --color-dark-surface: #1a1a1a;
-  --color-dark-elevated: #2a2a2a;
-  --color-dark-border: #333333;
+  --color-dark-bg: #030303;
+  --color-dark-surface: #0a0a0a;
+  --color-dark-elevated: #111111;
+  --color-dark-border: #1a1a1a;
+  
+  --color-glass: rgba(10, 10, 10, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
 
   /* Custom animations */
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -21,26 +24,27 @@
   --animate-bounce-subtle: bounce 2s ease-in-out infinite;
 
   @keyframes music-bar {
-
-    0%,
-    100% {
-      height: 4px;
-    }
-
-    50% {
-      height: 12px;
-    }
+    0%, 100% { height: 4px; }
+    50% { height: 16px; }
   }
+  
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
 }
 
 /* Global styles */
 body {
   background-color: var(--color-dark-bg);
-  color: white;
-  font-family: system-ui, -apple-system, sans-serif;
+  color: #e5e7eb;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
@@ -48,33 +52,47 @@ body {
   height: 100vh;
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
+/* Glassmorphism utility */
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
-
-/* Hide scrollbar for IE, Edge and Firefox */
 .no-scrollbar {
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }
 
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+/* Selection */
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: white;
 }
