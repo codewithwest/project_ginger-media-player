@@ -4,26 +4,19 @@ import { defineConfig } from 'vite';
 // https://vitejs.dev/config
 export default defineConfig((env) => {
   const { mode } = env;
-  
+
   return {
     mode,
     build: {
       outDir: '.vite/build',
       lib: {
         entry: 'src/main/index.ts',
-        fileName: () => 'main.js',
+        fileName: () => 'main.cjs',
         formats: ['cjs'],
       },
       rollupOptions: {
         external: [
           'electron',
-          'electron-squirrel-startup',
-          'express',
-          'fluent-ffmpeg',
-          'ffmpeg-static',
-          'ffprobe-static',
-          'get-port',
-          'cors',
           'path',
           'fs',
           'http',

@@ -11,25 +11,15 @@ import { PlaylistService } from './services/PlaylistService';
 import { UpdateService } from './services/UpdateService';
 import { ReleaseService } from './services/ReleaseService';
 
-
-// Security: Disable remote module
-app.on('remote-require', (event) => {
-  event.preventDefault();
-});
-
-app.on('remote-get-builtin', (event) => {
-  event.preventDefault();
-});
-
-app.on('remote-get-global', (event) => {
-  event.preventDefault();
-});
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
+declare const MAIN_WINDOW_VITE_NAME: string;
 
 // Single Instance Lock
 const gotTheLock = app.requestSingleInstanceLock();
 
 let mainWindow: BrowserWindow | null = null;
 let mediaServer: MediaServer | null = null;
+let downloadService: DownloadService | null = null;
 let trayService: TrayService | null = null;
 let libraryService: LibraryService | null = null;
 let playlistService: PlaylistService | null = null;
@@ -38,7 +28,7 @@ let updateService: UpdateService | null = null;
 function handleCommandLineArgs(argv: string[]) {
   const args = argv.slice(app.isPackaged ? 1 : 2);
   const filePath = args.find(arg => !arg.startsWith('-'));
-  
+
   if (filePath && mainWindow) {
     console.log('Opening file from CLI:', filePath);
     mainWindow.webContents.send('file:open-from-cli', filePath);
@@ -46,12 +36,15 @@ function handleCommandLineArgs(argv: string[]) {
 }
 
 const createWindow = (): void => {
-  // Create the browser window with security settings
+  console.log('[Main] Creating window...');
+
+  // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    show: true, // Force show on creation to debug Linux visibility
     backgroundColor: '#0a0a0a',
     webPreferences: {
       nodeIntegration: false,
@@ -62,18 +55,40 @@ const createWindow = (): void => {
       preload: path.join(__dirname, 'preload.js'),
     },
     titleBarStyle: 'hidden',
-    trafficLightPosition: { x: 15, y: 15 },
+  });
+
+  // Log loading failures
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error(`[Main] Failed to load UI: ${errorCode} ${errorDescription} at ${validatedURL}`);
   });
 
   // Load the index.html of the app
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    console.log('[Main] Loading Dev Server URL:', MAIN_WINDOW_VITE_DEV_SERVER_URL);
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    const indexPath = path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
+    console.log('[Main] Loading File:', indexPath);
+    mainWindow.loadFile(indexPath);
   }
 
+  // Ready to show
+  mainWindow.once('ready-to-show', () => {
+    console.log('[Main] Window ready to show.');
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
+
+  // Force show after a delay just in case ready-to-show never fires on this Linux distro
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isVisible()) {
+      console.log('[Main] Fallback: Force showing window.');
+      mainWindow.show();
+    }
+  }, 5000);
+
   // Open DevTools in development
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -82,28 +97,34 @@ const createWindow = (): void => {
     if (!(app as any).isQuitting) {
       event.preventDefault();
       mainWindow?.hide();
+      console.log('[Main] Window hidden (background mode)');
     }
     return false;
   });
-  
+
   // Initialize Tray Service
   trayService = new TrayService(mainWindow);
   trayService.createTray();
 };
 
-function registerIpcHandlers(): void {
+async function registerIpcHandlers(): Promise<void> {
   // Initialize Services
   // Note: mainWindow is created before this function is called
   const jobManager = new JobManager(mainWindow!);
-  const conversionService = new ConversionService();
-  const downloadService = new DownloadService();
-  libraryService = new LibraryService();
+  const ffmpegPath = downloadService?.getFFmpegPath();
+  const ffprobePath = downloadService?.getFFprobePath();
+
+  const conversionService = new ConversionService(ffmpegPath);
+  // downloadService is now initialized in app.on('ready')
+  libraryService = new LibraryService(ffprobePath);
   playlistService = new PlaylistService();
   updateService = new UpdateService(mainWindow!);
   new ReleaseService();
-  
+
   jobManager.registerService('conversion', conversionService);
-  jobManager.registerService('download', downloadService);
+  if (downloadService) {
+    jobManager.registerService('download', downloadService);
+  }
 
   // Playlist Persistence
   ipcMain.handle('playlist:save', async (_event, { playlist }) => {
@@ -140,7 +161,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('library:get-all', async () => {
     return libraryService?.getTracks();
   });
-  
+
   ipcMain.handle('library:get-folders', async () => {
     return libraryService?.getFolders();
   });
@@ -149,7 +170,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('media:get-stream-url', async (_event, { filePath }) => {
     if (!mediaServer) throw new Error('Media server not running');
     const ext = path.extname(filePath).toLowerCase();
-    const directPlayExtensions = ['.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.aac'];
+    const directPlayExtensions = ['.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
     const baseUrl = mediaServer.getUrl();
     if (directPlayExtensions.includes(ext)) {
       return `${baseUrl}/file?path=${encodeURIComponent(filePath)}`;
@@ -200,7 +221,7 @@ function registerIpcHandlers(): void {
   });
 
   // Downloads
-  ipcMain.handle('download:get-formats', async (_event, { url }) => {
+  ipcMain.handle('download:get-formats', async () => {
     // TODO: Implement yt-dlp integration
     return [];
   });
@@ -234,6 +255,15 @@ function registerIpcHandlers(): void {
   ipcMain.handle('update:install', () => {
     updateService?.quitAndInstall();
   });
+
+  ipcMain.handle('app:get-downloads-path', async () => {
+    return app.getPath('downloads');
+  });
+
+  // Background initialization (non-blocking)
+  downloadService?.init().catch(err => {
+    console.error('Failed to initialize DownloadService in background:', err);
+  });
 }
 
 function registerGlobalShortcuts(): void {
@@ -246,9 +276,13 @@ function registerGlobalShortcuts(): void {
 }
 
 if (!gotTheLock) {
+  console.log('[Main] Failed to get single instance lock. Quitting.');
   app.quit();
+  process.exit(0); // Force exit to prevent further execution (like ready event)
 } else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  console.log('[Main] Single instance lock obtained.');
+
+  app.on('second-instance', (_event, commandLine) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
@@ -257,28 +291,36 @@ if (!gotTheLock) {
     }
   });
 
-  if (require('electron-squirrel-startup')) {
+  if (process.platform === 'win32' && require('electron-squirrel-startup')) {
+    console.log('[Main] Squirrel startup detected. Quitting.');
     app.quit();
-  }
-}
-
-app.on('ready', async () => {
-  mediaServer = new MediaServer();
-  try {
-    const url = await mediaServer.start();
-    console.log('Media server started at:', url);
-  } catch (err) {
-    console.error('Failed to start media server:', err);
+    process.exit(0);
   }
 
-  createWindow();
-  registerIpcHandlers();
-  registerGlobalShortcuts();
+  // Only start the app if we have the lock
+  app.on('ready', async () => {
+    downloadService = new DownloadService();
+    mediaServer = new MediaServer(
+      downloadService.getFFmpegPath(),
+      downloadService.getFFprobePath()
+    );
 
-  mainWindow?.webContents.on('did-finish-load', () => {
-    handleCommandLineArgs(process.argv);
+    try {
+      const url = await mediaServer.start();
+      console.log('Media server started at:', url);
+    } catch (err) {
+      console.error('Failed to start media server:', err);
+    }
+
+    createWindow();
+    await registerIpcHandlers();
+    registerGlobalShortcuts();
+
+    mainWindow?.webContents.on('did-finish-load', () => {
+      handleCommandLineArgs(process.argv);
+    });
   });
-});
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

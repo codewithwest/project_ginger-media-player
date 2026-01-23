@@ -1,9 +1,6 @@
 import ffmpeg from 'fluent-ffmpeg';
 import { path as ffprobePath } from 'ffprobe-static';
-import path from 'path';
-
-// Configure ffprobe path
-ffmpeg.setFfprobePath(ffprobePath);
+import fs from 'fs';
 
 export interface MediaMetadata {
   duration: number;
@@ -25,6 +22,18 @@ export interface MediaMetadata {
 }
 
 export class MediaMetadataService {
+  constructor(ffprobePathCustom?: string) {
+    if (ffprobePathCustom && fs.existsSync(ffprobePathCustom)) {
+      ffmpeg.setFfprobePath(ffprobePathCustom);
+      console.log('[MediaMetadata] Using custom ffprobe path:', ffprobePathCustom);
+    } else if (ffprobePath) {
+      ffmpeg.setFfprobePath(ffprobePath);
+      console.log('[MediaMetadata] Falling back to default ffprobe path:', ffprobePath);
+    } else {
+      console.warn('[MediaMetadata] No ffprobe path found!');
+    }
+  }
+
   async getMetadata(filePath: string): Promise<MediaMetadata> {
     return new Promise((resolve, reject) => {
       ffmpeg.ffprobe(filePath, (err, metadata) => {

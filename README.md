@@ -97,3 +97,11 @@ MIT
 ## Contributing
 
 Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+### Fix sandbox permissions
+
+```bash
+cd node_modules/electron/dist/
+sudo chown root chrome-sandbox
+sudo chmod 4755 chrome-sandbox
+```

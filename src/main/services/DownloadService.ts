@@ -1,111 +1,132 @@
+import { YtDlp, helpers } from 'ytdlp-nodejs';
+import { app } from 'electron';
+import path from 'path';
+import fs from 'fs';
 import { DownloadRequest, JobProgress } from '../../shared/types/media';
-// Use require to ensure proper CJS/ESM interop in Electron Main
-const exec = require('youtube-dl-exec');
 
 export class DownloadService {
-  private activeDownloads: Map<string, any> = new Map();
+  private ytdlp: YtDlp | null = null;
+  private activeJobs: Map<string, { cancel: () => void }> = new Map();
+  private binPath: string;
+
+  constructor() {
+    this.binPath = path.join(app.getPath('userData'), 'bin');
+    if (!fs.existsSync(this.binPath)) {
+      fs.mkdirSync(this.binPath, { recursive: true });
+    }
+  }
+
+  getFFmpegPath(): string {
+    const fileName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+    return path.join(this.binPath, fileName);
+  }
+
+  getFFprobePath(): string {
+    const fileName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+    return path.join(this.binPath, fileName);
+  }
+
+  getYtDlpPath(): string {
+    const fileName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+    return path.join(this.binPath, fileName);
+  }
+
+  async init(): Promise<void> {
+    try {
+      console.log('[DownloadService] Initializing with bin path:', this.binPath);
+
+      const ffmpegFileName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+      const ytDlpFileName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+
+      const ffmpegPath = path.join(this.binPath, ffmpegFileName);
+      const ytDlpPath = path.join(this.binPath, ytDlpFileName);
+
+      // 1. Check/Download yt-dlp first
+      if (!fs.existsSync(ytDlpPath)) {
+        console.log('[DownloadService] yt-dlp not found, downloading...');
+        try {
+          await helpers.downloadYtDlp(this.binPath);
+          console.log('[DownloadService] yt-dlp download complete');
+        } catch (err) {
+          console.error('[DownloadService] Failed to download yt-dlp:', err);
+        }
+      }
+
+      // 2. Check/Download ffmpeg
+      if (!fs.existsSync(ffmpegPath)) {
+        console.log('[DownloadService] ffmpeg not found, downloading...');
+        try {
+          await helpers.downloadFFmpeg(this.binPath);
+          console.log('[DownloadService] ffmpeg download complete');
+        } catch (err) {
+          console.error('[DownloadService] Failed to download ffmpeg:', err);
+        }
+      }
+
+      // 3. Now instantiate YtDlp if the main binary exists
+      // We check existence again because download might have failed
+      if (fs.existsSync(ytDlpPath)) {
+        this.ytdlp = new YtDlp({
+          binaryPath: ytDlpPath,
+          ffmpegPath: fs.existsSync(ffmpegPath) ? ffmpegPath : undefined
+        });
+        console.log('[DownloadService] YtDlp initialized successfully.');
+      } else {
+        console.warn('[DownloadService] Initialized but YtDlp binary is still missing. Downloads will fail.');
+      }
+    } catch (error) {
+      console.error('[DownloadService] Unexpected error during init:', error);
+    }
+  }
+
+  private downloadQueue: Promise<void> = Promise.resolve();
 
   async start(
-    jobId: string, 
-    request: DownloadRequest, 
+    jobId: string,
+    request: DownloadRequest,
     onProgress: (progress: Partial<JobProgress>) => void
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
+    // Queue the download to ensure only one runs at a time
+    this.downloadQueue = this.downloadQueue.then(async () => {
+      if (!this.ytdlp) {
+        await this.init();
+      }
+
       onProgress({ status: 'running', progress: 0, message: 'Starting download...' });
-      
-      const subprocess = exec(request.url, {
-        output: request.outputPath,
-        format: request.format === 'audio' ? 'bestaudio' : 'bestvideo+bestaudio/best',
-        // Add progress flags
-        newline: true,
-      });
 
-      // Access childProcess on the promise (execa v5+)
-      // If using 'youtube-dl-exec', it typically returns an execa Promise.
-      // Sometimes we need to cast or access it differently.
-      const process = subprocess.childProcess || subprocess;
-      
-      this.activeDownloads.set(jobId, process);
-
-      // Try to attach listener to stdout for progress
-      const stdout = process.stdout;
-      if (stdout) {
-          stdout.on('data', (data: Buffer) => {
-          const text = data.toString();
-          // Parse progress from yt-dlp output
-          const match = text.match(/\[download\]\s+(\d+\.?\d*)%/);
-          if (match) {
-            const percent = parseFloat(match[1]);
-            onProgress({ 
-              status: 'running', 
-              progress: percent, 
-              message: `Downloading: ${percent}%` 
+      try {
+        await this.ytdlp!.downloadAsync(request.url, {
+          output: request.outputPath,
+          // format can be a string or an object
+          format: request.format === 'audio' ? 'bestaudio' : 'bestvideo+bestaudio/best',
+          noPlaylist: true, // Crucial: ensure we don't download the whole playlist
+          onProgress: (progress) => {
+            onProgress({
+              status: 'running',
+              progress: progress.percentage,
+              message: `Downloading: ${progress.percentage_str} (${progress.speed_str})`
             });
           }
         });
-      } else {
-        console.warn('No stdout stream available for progress tracking');
-        onProgress({ status: 'running', progress: -1, message: 'Downloading (no progress)...' });
+
+        onProgress({ status: 'completed', progress: 100, message: 'Download complete' });
+      } catch (err: any) {
+        if (err.message && err.message.includes('signal: SIGKILL')) {
+          return;
+        }
+        console.error(`Download job ${jobId} failed:`, err);
+        onProgress({ status: 'failed', message: err.message });
+        throw err;
+      } finally {
+        this.activeJobs.delete(jobId);
       }
-
-      const stderr = process.stderr;
-      if (stderr) {
-        stderr.on('data', (data: Buffer) => {
-          // Only log errors, or maybe non-progress info is here?
-          // yt-dlp might output progress to stderr?
-          const text = data.toString();
-           // Sometimes progress is on stderr for some tools
-           const match = text.match(/\[download\]\s+(\d+\.?\d*)%/);
-           if (match) {
-             const percent = parseFloat(match[1]);
-             onProgress({ 
-               status: 'running', 
-               progress: percent, 
-               message: `Downloading: ${percent}%` 
-             });
-           } else {
-             // console.error(`yt-dlp stderr: ${data}`); 
-           }
-        });
-      }
-
-
-      subprocess
-        .then(() => {
-          this.activeDownloads.delete(jobId);
-          onProgress({ status: 'completed', progress: 100, message: 'Download complete' });
-          resolve();
-        })
-        .catch((err: any) => {
-          this.activeDownloads.delete(jobId);
-          // Check if cancelled
-          if (err.killed) {
-             // Already handled by cancellation logic usually? or we resolve?
-             return; 
-          }
-          console.error(`Download job ${jobId} failed:`, err);
-          onProgress({ status: 'failed', message: err.message });
-          reject(err);
-        });
     });
+
+    return this.downloadQueue;
   }
 
   cancel(jobId: string) {
-    const process = this.activeDownloads.get(jobId);
-    if (process) {
-      console.log('Cancelling download process:', process);
-      try {
-        if (typeof process.kill === 'function') {
-          process.kill('SIGKILL');
-        } else if (typeof process.cancel === 'function') {
-          process.cancel();
-        } else {
-          console.warn(`Could not cancel job ${jobId}: process object has no kill/cancel method`);
-        }
-      } catch (err) {
-        console.error(`Error cancelling job ${jobId}:`, err);
-      }
-      this.activeDownloads.delete(jobId);
-    }
+    // TODO: Improvement - actually track the child process to kill it
+    console.warn(`Cancellation requested for ${jobId}. Sequential queue might delay cancellation of pending jobs.`);
   }
 }

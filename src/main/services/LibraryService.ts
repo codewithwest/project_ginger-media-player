@@ -26,9 +26,9 @@ export class LibraryService {
   private metadataService: MediaMetadataService;
   private data: LibraryData = { folders: [], tracks: [] };
 
-  constructor() {
+  constructor(ffprobePath?: string) {
     this.dataPath = path.join(app.getPath('userData'), 'library.json');
-    this.metadataService = new MediaMetadataService();
+    this.metadataService = new MediaMetadataService(ffprobePath);
     this.load();
   }
 
@@ -81,8 +81,8 @@ export class LibraryService {
     const newTracks: LibraryTrack[] = [];
 
     if (this.data.folders.length === 0) {
-        console.log('No folders to scan.');
-        return [];
+      console.log('No folders to scan.');
+      return [];
     }
 
     // existing tracks map for quick lookup
@@ -92,7 +92,7 @@ export class LibraryService {
       if (!fs.existsSync(folder)) continue;
 
       const files = await this.recursiveReaddir(folder);
-      
+
       for (const file of files) {
         const ext = path.extname(file).toLowerCase();
         if (supportedExts.includes(ext)) {
@@ -106,7 +106,6 @@ export class LibraryService {
 
           try {
             const metadata = await this.metadataService.getMetadata(file);
-            const stats = fs.statSync(file);
 
             const track: LibraryTrack = {
               id: this.generateId(file),

@@ -1,13 +1,20 @@
 import ffmpeg from 'fluent-ffmpeg';
 import pathToFfmpeg from 'ffmpeg-static';
-import { Readable } from 'stream';
+import fs from 'fs';
 
-// Ensure ffmpeg binary is set
-if (pathToFfmpeg) {
-  ffmpeg.setFfmpegPath(pathToFfmpeg);
-}
 
 export class TranscoderService {
+  constructor(ffmpegPath?: string) {
+    if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+      ffmpeg.setFfmpegPath(ffmpegPath);
+      console.log('[Transcoder] Using custom ffmpeg path:', ffmpegPath);
+    } else if (pathToFfmpeg) {
+      ffmpeg.setFfmpegPath(pathToFfmpeg);
+      console.log('[Transcoder] Falling back to default ffmpeg path:', pathToFfmpeg);
+    } else {
+      console.warn('[Transcoder] No ffmpeg path found!');
+    }
+  }
   /**
    * Creates a transcoding stream for a media file.
    * Converts unsupported formats to a streamable MP4 (fragmented) container.
@@ -25,7 +32,7 @@ export class TranscoderService {
     // We want to minimize CPU usage, so we'll try to copy video if compatible (H.264)
     // and just convert audio to AAC if needed.
     // For now, to ensure compatibility, we'll use a standard preset.
-    
+
     command
       .format('mp4')
       .outputOptions([
@@ -37,7 +44,7 @@ export class TranscoderService {
         '-b:a 128k',                // Audio bitrate
         '-max_muxing_queue_size 1024' // Buffer size for muxing
       ])
-      .on('error', (err, stdout, stderr) => {
+      .on('error', (err, _stdout, _stderr) => {
         // Suppress "Output stream closed" errors which happen when client disconnects
         if (err.message.includes('Output stream closed')) return;
         console.error('Transcoding error:', err.message);

@@ -3,7 +3,7 @@ import { useMediaPlayerStore } from '../../state/media-player';
 
 export function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  
+
   const {
     streamUrl,
     status,
@@ -12,8 +12,7 @@ export function VideoPlayer() {
     setPlaybackState,
     play,
     pause,
-    stop
-  } = useMediaPlayerStore(); // We select specifically to avoid re-renders? better to extract needed
+  } = useMediaPlayerStore();
 
   // Sync Play/Pause/Stop status
   useEffect(() => {
@@ -41,7 +40,7 @@ export function VideoPlayer() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    
+
     // Only seek if the difference is significant (> 0.5s) to avoid fighting with timeUpdate
     if (Math.abs(video.currentTime - position) > 0.5) {
       video.currentTime = position;
@@ -57,8 +56,8 @@ export function VideoPlayer() {
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setPlaybackState({ 
-        duration: videoRef.current.duration 
+      setPlaybackState({
+        duration: videoRef.current.duration
       });
       // If we were supposed to be playing, ensure we play
       if (status === 'playing') {
@@ -70,7 +69,7 @@ export function VideoPlayer() {
   const handleEnded = () => {
     setPlaybackState({ status: 'stopped', position: 0 });
   };
-  
+
   if (!streamUrl) return null;
 
   /* New state for subtitles */
@@ -96,16 +95,26 @@ export function VideoPlayer() {
 
   // ... previous effects ...
 
+  const handleError = (e: any) => {
+    const error = e.target.error;
+    console.error("Video player error:", {
+      code: error?.code,
+      message: error?.message,
+      src: videoRef.current?.src
+    });
+  };
+
   return (
     <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative group">
       <video
         ref={videoRef}
         src={streamUrl}
-        crossOrigin="anonymous" 
+        crossOrigin="anonymous"
         className="max-w-full max-h-full object-contain shadow-2xl"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleEnded}
+        onError={handleError}
         onClick={() => status === 'playing' ? pause() : play()}
       >
         {subtitleUrl && (

@@ -2,7 +2,6 @@ import express from 'express';
 import getPort from 'get-port';
 import cors from 'cors';
 import { Server } from 'http';
-import path from 'path';
 import fs from 'fs';
 import { TranscoderService } from './Transcoder';
 import { MediaMetadataService } from './MediaMetadata';
@@ -14,11 +13,11 @@ export class MediaServer {
   private transcoder: TranscoderService;
   private metadataService: MediaMetadataService;
 
-  constructor() {
+  constructor(ffmpegPath?: string, ffprobePath?: string) {
     this.app = express();
-    this.transcoder = new TranscoderService();
-    this.metadataService = new MediaMetadataService();
-    
+    this.transcoder = new TranscoderService(ffmpegPath);
+    this.metadataService = new MediaMetadataService(ffprobePath);
+
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -37,12 +36,26 @@ export class MediaServer {
     // Use this endpoint for files we know the browser can play directly (MP4, WebM, MP3)
     this.app.get('/file', (req, res) => {
       const filePath = req.query.path as string;
-      if (!filePath || !fs.existsSync(filePath)) {
+      if (!filePath) {
+        console.error('[MediaServer] No path provided for /file');
+        res.status(400).send('Path is required');
+        return;
+      }
+
+      if (!fs.existsSync(filePath)) {
+        console.error(`[MediaServer] File not found: ${filePath}`);
         res.status(404).send('File not found');
         return;
       }
 
-      res.sendFile(filePath);
+      res.sendFile(filePath, (err) => {
+        if (err) {
+          console.error(`[MediaServer] Error sending file: ${filePath}`, err);
+          if (!res.headersSent) {
+            res.status(500).send('Error sending file');
+          }
+        }
+      });
     });
 
     // 2. Transcoded Stream
@@ -51,7 +64,14 @@ export class MediaServer {
       const filePath = req.query.path as string;
       const startTime = parseFloat(req.query.start as string) || 0;
 
-      if (!filePath || !fs.existsSync(filePath)) {
+      if (!filePath) {
+        console.error('[MediaServer] No path provided for /stream');
+        res.status(400).send('Path is required');
+        return;
+      }
+
+      if (!fs.existsSync(filePath)) {
+        console.error(`[MediaServer] File not found for stream: ${filePath}`);
         res.status(404).send('File not found');
         return;
       }
@@ -90,7 +110,7 @@ export class MediaServer {
     // 4. Subtitles (VTT extraction)
     this.app.get('/subtitles', (req, res) => {
       const filePath = req.query.path as string;
-      
+
       if (!filePath || !fs.existsSync(filePath)) {
         res.status(404).send('File not found');
         return;
@@ -99,9 +119,9 @@ export class MediaServer {
       console.log(`[MediaServer] Extracting subtitles for: ${filePath}`);
 
       res.setHeader('Content-Type', 'text/vtt');
-      
+
       const command = this.transcoder.extractSubtitles(filePath);
-      
+
       command.pipe(res, { end: true });
 
       req.on('close', () => {
@@ -112,10 +132,10 @@ export class MediaServer {
 
   async start(): Promise<string> {
     this.port = await getPort({ port: 3000 });
-    
+
     return new Promise((resolve) => {
-      this.server = this.app.listen(this.port, () => {
-        const url = `http://localhost:${this.port}`;
+      this.server = this.app.listen(this.port, '127.0.0.1', () => {
+        const url = `http://127.0.0.1:${this.port}`;
         console.log(`[MediaServer] Running at ${url}`);
         resolve(url);
       });
@@ -130,9 +150,9 @@ export class MediaServer {
   }
 
   getUrl(): string {
-    return `http://localhost:${this.port}`;
+    return `http://127.0.0.1:${this.port}`;
   }
-  
+
   async getMetadata(filePath: string) {
     return this.metadataService.getMetadata(filePath);
   }

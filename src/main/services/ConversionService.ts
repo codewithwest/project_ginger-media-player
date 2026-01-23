@@ -1,18 +1,23 @@
 import ffmpeg from 'fluent-ffmpeg';
 import pathToFfmpeg from 'ffmpeg-static';
+import fs from 'fs';
 import { ConversionRequest, JobProgress } from '../../shared/types/media';
-
-// Ensure ffmpeg binary is set
-if (pathToFfmpeg) {
-  ffmpeg.setFfmpegPath(pathToFfmpeg);
-}
 
 export class ConversionService {
   private activeCommands: Map<string, ffmpeg.FfmpegCommand> = new Map();
 
+  constructor(ffmpegPath?: string) {
+    if (ffmpegPath && fs.existsSync(ffmpegPath)) {
+      ffmpeg.setFfmpegPath(ffmpegPath);
+      console.log('[ConversionService] Using custom ffmpeg path:', ffmpegPath);
+    } else if (pathToFfmpeg) {
+      ffmpeg.setFfmpegPath(pathToFfmpeg);
+    }
+  }
+
   async start(
-    jobId: string, 
-    request: ConversionRequest, 
+    jobId: string,
+    request: ConversionRequest,
     onProgress: (progress: Partial<JobProgress>) => void
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -35,10 +40,10 @@ export class ConversionService {
 
       command
         .on('progress', (progress) => {
-          onProgress({ 
+          onProgress({
             progress: Math.round(progress.percent || 0),
             status: 'running',
-            message: 'Converting...' 
+            message: 'Converting...'
           });
         })
         .on('end', () => {
@@ -49,8 +54,8 @@ export class ConversionService {
         .on('error', (err) => {
           this.activeCommands.delete(jobId);
           if (err.message.includes('SIGKILL')) {
-             // Cancelled
-             return;
+            // Cancelled
+            return;
           }
           console.error(`Conversion job ${jobId} failed:`, err);
           reject(err);
