@@ -1,7 +1,7 @@
 {
   "name": "ginger-media-player",
   "productName": "Ginger Media Player",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ginger Media Player - A modern media player for your media files and online media.",
   "main": ".vite/build/main.cjs",
   "scripts": {

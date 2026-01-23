@@ -10,6 +10,7 @@ import { LibraryService } from './services/LibraryService';
 import { PlaylistService } from './services/PlaylistService';
 import { UpdateService } from './services/UpdateService';
 import { ReleaseService } from './services/ReleaseService';
+import { SettingsService } from './services/SettingsService';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -24,6 +25,7 @@ let trayService: TrayService | null = null;
 let libraryService: LibraryService | null = null;
 let playlistService: PlaylistService | null = null;
 let updateService: UpdateService | null = null;
+let settingsService: SettingsService | null = null;
 
 function handleCommandLineArgs(argv: string[]) {
   const args = argv.slice(app.isPackaged ? 1 : 2);
@@ -109,8 +111,8 @@ const createWindow = (): void => {
 
 async function registerIpcHandlers(): Promise<void> {
   // Initialize Services
-  // Note: mainWindow is created before this function is called
-  const jobManager = new JobManager(mainWindow!);
+  settingsService = new SettingsService();
+  const jobManager = new JobManager(mainWindow!, settingsService);
   const ffmpegPath = downloadService?.getFFmpegPath();
   const ffprobePath = downloadService?.getFFprobePath();
 
@@ -220,9 +222,23 @@ async function registerIpcHandlers(): Promise<void> {
     return jobManager.getAllJobs();
   });
 
+  ipcMain.handle('job:clear-history', async () => {
+    settingsService?.clearHistory();
+    return [];
+  });
+
+  // Settings Handlers
+  ipcMain.handle('settings:get', async () => {
+    return settingsService?.getSettings();
+  });
+
+  ipcMain.handle('settings:update', async (_event, updates) => {
+    settingsService?.updateSettings(updates);
+    return settingsService?.getSettings();
+  });
+
   // Downloads
   ipcMain.handle('download:get-formats', async () => {
-    // TODO: Implement yt-dlp integration
     return [];
   });
 
@@ -257,7 +273,7 @@ async function registerIpcHandlers(): Promise<void> {
   });
 
   ipcMain.handle('app:get-downloads-path', async () => {
-    return app.getPath('downloads');
+    return settingsService?.getSettings().downloadsPath || path.join(app.getPath('videos'), 'GingerPlayer');
   });
 
   // Background initialization (non-blocking)

@@ -18,8 +18,10 @@ export function PlaylistSidebar() {
   const [downloadsPath, setDownloadsPath] = useState('');
 
   useEffect(() => {
-    window.electronAPI.app.getDownloadsPath().then(path => {
-      setDownloadsPath(path);
+    window.electronAPI.settings.get().then(settings => {
+      if (settings?.downloadsPath) {
+        setDownloadsPath(settings.downloadsPath);
+      }
     });
   }, []);
 
@@ -40,6 +42,7 @@ export function PlaylistSidebar() {
     const newPath = await window.electronAPI.library.pickFolder();
     if (newPath) {
       setDownloadsPath(newPath);
+      window.electronAPI.settings.update({ downloadsPath: newPath });
     }
   };
 

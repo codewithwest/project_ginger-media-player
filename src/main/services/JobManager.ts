@@ -1,14 +1,23 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow } from 'electron';
 import { Job, JobProgress, ConversionRequest, DownloadRequest } from '../../shared/types/media';
 import { v4 as uuidv4 } from 'uuid';
+import { SettingsService } from './SettingsService';
 
 export class JobManager {
   private jobs: Map<string, Job> = new Map();
   private mainWindow: BrowserWindow | null = null;
   private services: Record<string, any> = {};
+  private settingsService: SettingsService;
 
-  constructor(mainWindow: BrowserWindow) {
+  constructor(mainWindow: BrowserWindow, settingsService: SettingsService) {
     this.mainWindow = mainWindow;
+    this.settingsService = settingsService;
+
+    // Load history into active jobs
+    const history = this.settingsService.getJobHistory();
+    history.forEach(job => {
+      this.jobs.set(job.jobId, job);
+    });
   }
 
   registerService(type: 'conversion' | 'download', service: any) {
@@ -57,6 +66,7 @@ export class JobManager {
     };
 
     this.jobs.set(jobId, job);
+    console.log(`[JobManager] Starting download job: ${jobId}`, request.url);
     this.emitProgress(job);
 
     if (this.services['download']) {
@@ -91,6 +101,7 @@ export class JobManager {
 
     Object.assign(job, updates);
     this.jobs.set(jobId, job);
+    this.settingsService.saveJob(job);
     this.emitProgress(job);
   }
 

@@ -3,11 +3,13 @@ import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { DownloadRequest, JobProgress } from '../../shared/types/media';
+import { MediaMetadataService } from './MediaMetadata';
 
 export class DownloadService {
   private ytdlp: YtDlp | null = null;
   private activeJobs: Map<string, { cancel: () => void }> = new Map();
   private binPath: string;
+  private metadataService: MediaMetadataService | null = null;
 
   constructor() {
     this.binPath = path.join(app.getPath('userData'), 'bin');
@@ -33,46 +35,37 @@ export class DownloadService {
 
   async init(): Promise<void> {
     try {
-      console.log('[DownloadService] Initializing with bin path:', this.binPath);
-
       const ffmpegFileName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
       const ytDlpFileName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
 
       const ffmpegPath = path.join(this.binPath, ffmpegFileName);
       const ytDlpPath = path.join(this.binPath, ytDlpFileName);
 
-      // 1. Check/Download yt-dlp first
       if (!fs.existsSync(ytDlpPath)) {
-        console.log('[DownloadService] yt-dlp not found, downloading...');
         try {
           await helpers.downloadYtDlp(this.binPath);
-          console.log('[DownloadService] yt-dlp download complete');
         } catch (err) {
           console.error('[DownloadService] Failed to download yt-dlp:', err);
         }
       }
 
-      // 2. Check/Download ffmpeg
       if (!fs.existsSync(ffmpegPath)) {
-        console.log('[DownloadService] ffmpeg not found, downloading...');
         try {
           await helpers.downloadFFmpeg(this.binPath);
-          console.log('[DownloadService] ffmpeg download complete');
         } catch (err) {
           console.error('[DownloadService] Failed to download ffmpeg:', err);
         }
       }
 
-      // 3. Now instantiate YtDlp if the main binary exists
-      // We check existence again because download might have failed
       if (fs.existsSync(ytDlpPath)) {
+        const ffPath = fs.existsSync(ffmpegPath) ? ffmpegPath : undefined;
         this.ytdlp = new YtDlp({
           binaryPath: ytDlpPath,
-          ffmpegPath: fs.existsSync(ffmpegPath) ? ffmpegPath : undefined
+          ffmpegPath: ffPath
         });
-        console.log('[DownloadService] YtDlp initialized successfully.');
-      } else {
-        console.warn('[DownloadService] Initialized but YtDlp binary is still missing. Downloads will fail.');
+
+        const probePath = this.getFFprobePath();
+        this.metadataService = new MediaMetadataService(fs.existsSync(probePath) ? probePath : undefined);
       }
     } catch (error) {
       console.error('[DownloadService] Unexpected error during init:', error);
@@ -86,34 +79,132 @@ export class DownloadService {
     request: DownloadRequest,
     onProgress: (progress: Partial<JobProgress>) => void
   ): Promise<void> {
-    // Queue the download to ensure only one runs at a time
     this.downloadQueue = this.downloadQueue.then(async () => {
       if (!this.ytdlp) {
         await this.init();
       }
 
-      onProgress({ status: 'running', progress: 0, message: 'Starting download...' });
+      onProgress({
+        status: 'running',
+        progress: 1,
+        message: 'Analyzing...',
+        title: 'New Download'
+      });
 
       try {
-        await this.ytdlp!.downloadAsync(request.url, {
-          output: request.outputPath,
-          // format can be a string or an object
-          format: request.format === 'audio' ? 'bestaudio' : 'bestvideo+bestaudio/best',
-          noPlaylist: true, // Crucial: ensure we don't download the whole playlist
-          onProgress: (progress) => {
+        let finalPath = request.outputPath;
+        let displayTitle = '';
+
+        let cleanedUrl = request.url;
+        try {
+          const urlObj = new URL(request.url);
+          if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+            urlObj.searchParams.delete('list');
+            urlObj.searchParams.delete('index');
+            cleanedUrl = urlObj.toString();
+          }
+        } catch (e) { /* ignore */ }
+
+        try {
+          const info: any = await this.ytdlp!.getInfoAsync(cleanedUrl, { noPlaylist: true } as any);
+
+          let rawTitle = '';
+          if (info._type === 'playlist' && info.entries && info.entries[0]) {
+            rawTitle = info.entries[0].title;
+          } else {
+            rawTitle = info.title;
+          }
+
+          if (rawTitle) {
+            displayTitle = rawTitle.replace(/^Mix\s*-\s*/i, '').trim();
+            const ext = request.format === 'audio' ? 'mp3' : ((info as any).ext || 'webm');
+
+            const safeName = displayTitle
+              .replace(/[\\/:*?"<>|]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            finalPath = path.join(path.dirname(request.outputPath), `${safeName}.${ext}`);
+
             onProgress({
-              status: 'running',
-              progress: progress.percentage,
-              message: `Downloading: ${progress.percentage_str} (${progress.speed_str})`
+              title: displayTitle,
+              progress: 5,
+              message: `Queuing: ${displayTitle}`
             });
+            console.log(`[DownloadService] Starting: "${displayTitle}"`);
+          }
+        } catch (e) {
+          console.warn('[DownloadService] Info fetch failed:', e);
+        }
+
+        if (!displayTitle) {
+          displayTitle = path.basename(finalPath).replace(/\.%(ext)s$/, '').replace(/%/g, '') || 'Downloaded Video';
+          onProgress({ title: displayTitle, progress: 10 });
+        }
+
+        if (fs.existsSync(finalPath)) {
+          onProgress({
+            status: 'completed',
+            progress: 100,
+            message: 'Already exists',
+            title: displayTitle,
+            outputFile: finalPath
+          });
+          return;
+        }
+
+        await this.ytdlp!.downloadAsync(cleanedUrl, {
+          output: finalPath,
+          format: request.format === 'audio' ? 'bestaudio/best' : 'bestvideo+bestaudio/best',
+          noPlaylist: true,
+          onProgress: (progress) => {
+            const percentage = Math.round(progress.percentage);
+            if (!isNaN(percentage)) {
+              onProgress({
+                status: 'running',
+                progress: Math.max(10, percentage),
+                message: percentage === 100 ? 'Finishing up...' : `Downloading... ${percentage}%`,
+                title: displayTitle
+              });
+            }
           }
         });
 
-        onProgress({ status: 'completed', progress: 100, message: 'Download complete' });
-      } catch (err: any) {
-        if (err.message && err.message.includes('signal: SIGKILL')) {
-          return;
+        // RESOLVE ACTUAL PATH: The logOutput is a string of the full terminal log.
+        // We need to verify if finalPath exists, or if yt-dlp merged it into a different extension.
+        let actualPath = finalPath;
+
+        if (!fs.existsSync(actualPath)) {
+          const dir = path.dirname(finalPath);
+          const baseName = path.basename(finalPath, path.extname(finalPath));
+          if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir);
+            const match = files.find(f => f.startsWith(baseName));
+            if (match) {
+              actualPath = path.join(dir, match);
+            }
+          }
         }
+
+        // Final Title Check: Minimal logging
+        if (this.metadataService && fs.existsSync(actualPath)) {
+          try {
+            const meta = await this.metadataService.getMetadata(actualPath);
+            if (!displayTitle && meta.tags && meta.tags.title) {
+              displayTitle = meta.tags.title.replace(/^Mix\s*-\s*/i, '').trim();
+            }
+          } catch (e) { /* ignore */ }
+        }
+
+        onProgress({
+          status: 'completed',
+          progress: 100,
+          message: 'Success',
+          title: displayTitle,
+          outputFile: actualPath
+        });
+      } catch (err: any) {
+        if (err.message && err.message.includes('signal: SIGKILL')) return;
         console.error(`Download job ${jobId} failed:`, err);
         onProgress({ status: 'failed', message: err.message });
         throw err;
@@ -126,7 +217,6 @@ export class DownloadService {
   }
 
   cancel(jobId: string) {
-    // TODO: Improvement - actually track the child process to kill it
-    console.warn(`Cancellation requested for ${jobId}. Sequential queue might delay cancellation of pending jobs.`);
+    console.warn(`Cancellation requested for ${jobId}.`);
   }
 }

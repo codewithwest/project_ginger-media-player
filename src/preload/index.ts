@@ -38,12 +38,12 @@ const electronAPI = {
     onStateChanged: (callback: (state: IpcEventData<'media:state-changed'>) => void) => {
       const subscription = (_event: IpcRendererEvent, data: IpcEventData<'media:state-changed'>) => callback(data);
       ipcRenderer.on('media:state-changed', subscription);
-      return () => ipcRenderer.removeListener('media:state-changed', subscription);
+      return () => { ipcRenderer.removeListener('media:state-changed', subscription); };
     },
     onProgress: (callback: (data: IpcEventData<'media:progress'>) => void) => {
       const subscription = (_event: IpcRendererEvent, data: IpcEventData<'media:progress'>) => callback(data);
       ipcRenderer.on('media:progress', subscription);
-      return () => ipcRenderer.removeListener('media:progress', subscription);
+      return () => { ipcRenderer.removeListener('media:progress', subscription); };
     },
   },
 
@@ -56,7 +56,7 @@ const electronAPI = {
     onFileOpenFromCLI: (callback: (path: string) => void) => {
       const subscription = (_event: IpcRendererEvent, path: string) => callback(path);
       ipcRenderer.on('file:open-from-cli', subscription);
-      return () => ipcRenderer.removeListener('file:open-from-cli', subscription);
+      return () => { ipcRenderer.removeListener('file:open-from-cli', subscription); };
     },
     savePlaylist: (playlist: any[]) => ipcRenderer.invoke('playlist:save', { playlist }),
     loadPlaylist: () => ipcRenderer.invoke('playlist:load'),
@@ -72,11 +72,13 @@ const electronAPI = {
       ipcRenderer.invoke('job:cancel', { jobId }),
     getAll: (): Promise<IpcResponse<'job:get-all'>> =>
       ipcRenderer.invoke('job:get-all'),
+    clearHistory: (): Promise<void> =>
+      ipcRenderer.invoke('job:clear-history'),
 
     onProgress: (callback: (data: IpcEventData<'job:progress'>) => void) => {
       const subscription = (_event: IpcRendererEvent, data: IpcEventData<'job:progress'>) => callback(data);
       ipcRenderer.on('job:progress', subscription);
-      return () => ipcRenderer.removeListener('job:progress', subscription);
+      return () => { ipcRenderer.removeListener('job:progress', subscription); };
     },
   },
 
@@ -114,12 +116,12 @@ const electronAPI = {
     onStatusChange: (callback: (data: { status: string, info?: any, error?: string }) => void) => {
       const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
       ipcRenderer.on('update:status', subscription);
-      return () => ipcRenderer.removeListener('update:status', subscription);
+      return () => { ipcRenderer.removeListener('update:status', subscription); };
     },
     onProgress: (callback: (data: any) => void) => {
       const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
       ipcRenderer.on('update:progress', subscription);
-      return () => ipcRenderer.removeListener('update:progress', subscription);
+      return () => { ipcRenderer.removeListener('update:progress', subscription); };
     },
   },
 
@@ -132,6 +134,10 @@ const electronAPI = {
   // App Info
   app: {
     getDownloadsPath: (): Promise<string> => ipcRenderer.invoke('app:get-downloads-path'),
+  },
+  settings: {
+    get: (): Promise<any> => ipcRenderer.invoke('settings:get'),
+    update: (updates: any): Promise<any> => ipcRenderer.invoke('settings:update', updates),
   },
 };
 

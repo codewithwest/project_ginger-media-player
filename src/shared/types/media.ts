@@ -30,6 +30,9 @@ export interface JobProgress {
   status: 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
   progress: number; // 0-100
   message?: string;
+  title?: string;
+  outputFile?: string;
+  error?: string;
 }
 
 export interface Job extends JobProgress {
