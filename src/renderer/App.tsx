@@ -11,6 +11,7 @@ import { VideoPlayer } from './components/player/VideoPlayer';
 import { JobDashboard } from './components/jobs/JobDashboard';
 import { LibraryView } from './components/library/LibraryView';
 import { ReleasesView } from './components/release/ReleasesView';
+import { Equalizer } from './components/player/Equalizer';
 import { useJobsStore } from './state/jobs';
 
 export function App() {
@@ -19,6 +20,7 @@ export function App() {
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [showReleases, setShowReleases] = useState(false);
+  const [showEqualizer, setShowEqualizer] = useState(false);
   const [showQueue, setShowQueue] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
@@ -134,10 +136,11 @@ export function App() {
       <div className="flex-1 flex overflow-hidden relative">
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col relative overflow-hidden">
-          {/* Library Overlays */}
+          {/* Overlays */}
           {showLibrary && <LibraryView onClose={() => setShowLibrary(false)} />}
           {showReleases && <ReleasesView onClose={() => setShowReleases(false)} />}
           {showJobs && <JobDashboard onClose={() => setShowJobs(false)} />}
+          {showEqualizer && <Equalizer onClose={() => setShowEqualizer(false)} />}
 
           {/* Main Stage (Player) */}
           <div className="flex-1 relative flex items-center justify-center overflow-hidden">
@@ -218,7 +221,11 @@ export function App() {
       {/* Bottom Controls */}
       <div className="h-28 glass-dark border-t border-white/5 relative z-50">
         <div className="max-w-7xl mx-auto h-full flex items-center px-8">
-          <PlayerControls onToggleQueue={() => setShowQueue(!showQueue)} queueVisible={showQueue} />
+          <PlayerControls
+            onToggleQueue={() => setShowQueue(!showQueue)}
+            queueVisible={showQueue}
+            onToggleEqualizer={() => setShowEqualizer(!showEqualizer)}
+          />
         </div>
       </div>
     </div>

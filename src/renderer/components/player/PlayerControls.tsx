@@ -1,12 +1,13 @@
-import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Volume2, Maximize, ListMusic } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Volume2, Maximize, ListMusic, SlidersHorizontal } from 'lucide-react';
 import { useMediaPlayerStore } from '../../state/media-player';
 
 interface PlayerControlsProps {
   onToggleQueue?: () => void;
   queueVisible?: boolean;
+  onToggleEqualizer?: () => void;
 }
 
-export function PlayerControls({ onToggleQueue, queueVisible }: PlayerControlsProps) {
+export function PlayerControls({ onToggleQueue, queueVisible, onToggleEqualizer }: PlayerControlsProps) {
   const {
     status,
     shuffle,
@@ -158,6 +159,14 @@ export function PlayerControls({ onToggleQueue, queueVisible }: PlayerControlsPr
           </div>
 
           <div className="w-[1px] h-4 bg-white/10 mx-2" />
+
+          <button
+            onClick={onToggleEqualizer}
+            className="p-2 text-gray-500 hover:text-gray-300 hover:bg-white/5 rounded-xl transition-all"
+            title="Equalizer"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
 
           <button
             onClick={handleToggleFullScreen}

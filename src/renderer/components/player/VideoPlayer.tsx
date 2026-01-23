@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMediaPlayerStore } from '../../state/media-player';
+import { useAudioEngine } from '../../state/audio-engine';
+import { Visualizer } from './Visualizer';
 
 export function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -104,13 +106,28 @@ export function VideoPlayer() {
     });
   };
 
+  const initAudio = useAudioEngine(state => state.init);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      initAudio(videoRef.current);
+    }
+  }, [initAudio]);
+
   return (
-    <div className="w-full h-full flex items-center justify-center bg-black overflow-hidden relative group">
+    <div className="w-full h-full flex items-center justify-center bg-transparent overflow-hidden relative group">
+      {/* Background/Visualizer layer */}
+      {!currentSource?.path?.toLowerCase().endsWith('.mp4') && (
+        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+          <Visualizer />
+        </div>
+      )}
+
       <video
         ref={videoRef}
         src={streamUrl}
         crossOrigin="anonymous"
-        className="max-w-full max-h-full object-contain shadow-2xl"
+        className="max-w-full max-h-full object-contain shadow-2xl z-10"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleEnded}
@@ -127,6 +144,11 @@ export function VideoPlayer() {
           />
         )}
       </video>
+
+      {/* Dynamic Overlay Visualizer for videos too? Maybe just at the bottom */}
+      <div className="absolute bottom-0 inset-x-0 h-16 opacity-50 pointer-events-none z-20">
+        <Visualizer />
+      </div>
     </div>
   );
 }
