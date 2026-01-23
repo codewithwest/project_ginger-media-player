@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# Ginger Media Player CLI Wrapper
+# This script makes it easier to run the CLI without npm run
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Run the CLI through electron
+electron "$PROJECT_ROOT/src/main/cli.ts" "$@"

@@ -10,7 +10,11 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "test": "vitest"
+    "test": "vitest",
+    "cli": "electron src/main/cli.ts"
+  },
+  "bin": {
+    "ginger": "./dist/cli.js"
   },
   "keywords": [],
   "author": {
@@ -64,6 +68,7 @@
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "@types/react-window": "^1.8.8",
+    "commander": "^14.0.2",
     "cors": "^2.8.5",
     "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
