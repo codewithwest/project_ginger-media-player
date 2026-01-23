@@ -9,7 +9,7 @@ import { MediaMetadataService } from './MediaMetadata';
 export class MediaServer {
   private app: express.Express;
   private server: Server | null = null;
-  private port: number = 0;
+  private port = 0;
   private transcoder: TranscoderService;
   private metadataService: MediaMetadataService;
 

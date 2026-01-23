@@ -20,7 +20,7 @@ export class TranscoderService {
    * Converts unsupported formats to a streamable MP4 (fragmented) container.
    * If the format is mostly compatible, it will try to copy streams (remux) instead of re-encoding.
    */
-  createStream(filePath: string, startTime: number = 0): ffmpeg.FfmpegCommand {
+  createStream(filePath: string, startTime = 0): ffmpeg.FfmpegCommand {
     const command = ffmpeg(filePath);
 
     // Seek to start time if needed
@@ -44,7 +44,7 @@ export class TranscoderService {
         '-b:a 128k',                // Audio bitrate
         '-max_muxing_queue_size 1024' // Buffer size for muxing
       ])
-      .on('error', (err, _stdout, _stderr) => {
+      .on('error', (err) => {
         // Suppress "Output stream closed" errors which happen when client disconnects
         if (err.message.includes('Output stream closed')) return;
         console.error('Transcoding error:', err.message);

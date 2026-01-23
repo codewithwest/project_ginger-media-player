@@ -23,8 +23,8 @@ export async function getServices() {
 
    return {
       downloadService,
-      conversionService: conversionService!,
-      libraryService: libraryService!,
-      playlistService: playlistService!
+      conversionService: conversionService as ConversionService,
+      libraryService: libraryService as LibraryService,
+      playlistService: playlistService as PlaylistService
    };
 }

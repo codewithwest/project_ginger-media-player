@@ -1,7 +1,7 @@
 
 // Main React application component
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, CSSProperties } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
@@ -14,8 +14,12 @@ import { ReleasesView } from './components/release/ReleasesView';
 import { Equalizer } from './components/player/Equalizer';
 import { useJobsStore } from './state/jobs';
 
+interface CustomCSSProperties extends CSSProperties {
+  WebkitAppRegion?: 'drag' | 'no-drag';
+}
+
 export function App() {
-  const { addToPlaylist, playAtIndex, playlist, status, streamUrl, loadPlaylist } = useMediaPlayerStore();
+  const { addToPlaylist, playAtIndex, playlist, status, streamUrl } = useMediaPlayerStore();
   const { syncJobs, initializeListeners } = useJobsStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
@@ -95,13 +99,13 @@ export function App() {
       <Background3D />
 
       {/* Title Bar - Draggable */}
-      <div className="h-10 w-full glass flex items-center px-4 select-none z-50" style={{ WebkitAppRegion: 'drag' } as any}>
+      <div className="h-10 w-full glass flex items-center px-4 select-none z-50" style={{ WebkitAppRegion: 'drag' } as CustomCSSProperties}>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
           <div className="text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase">Ginger Media</div>
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as any}>
+        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as CustomCSSProperties}>
           <button
             onClick={() => setShowLibrary(!showLibrary)}
             className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showLibrary ? 'text-primary-400 bg-white/5' : 'text-gray-400'}`}

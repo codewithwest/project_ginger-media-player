@@ -24,6 +24,11 @@ export interface PlaybackState {
   repeat: RepeatMode;
 }
 
+export interface MediaPlayerState extends PlaybackState {
+  playlist: MediaSource[];
+  currentIndex: number;
+}
+
 export interface JobProgress {
   jobId: string;
   type: 'conversion' | 'download';

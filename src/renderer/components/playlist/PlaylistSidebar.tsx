@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMediaPlayerStore } from '../../state/media-player';
 import { Play, Trash2, ListMusic, Plus, Download, Folder } from 'lucide-react';
+import type { PlaylistItem } from '@shared/types';
 
 export function PlaylistSidebar() {
   const {
@@ -28,13 +29,13 @@ export function PlaylistSidebar() {
   const handleAddFiles = async () => {
     const files = await window.electronAPI.file.openDialog();
     if (files && files.length > 0) {
-      const newItems = files.map((filePath: any) => ({
+      const newItems: PlaylistItem[] = files.map((filePath: string) => ({
         id: filePath,
         type: 'local' as const,
         path: filePath,
         title: typeof filePath === 'string' ? filePath.split('/').pop() || 'Unknown' : 'Unknown'
       }));
-      newItems.forEach((item: any) => addToPlaylist(item));
+      newItems.forEach((item: PlaylistItem) => addToPlaylist(item));
     }
   };
 

@@ -8,7 +8,7 @@ describe('CLI Output Utilities', () => {
 
    describe('outputJSON', () => {
       it('should output valid JSON', () => {
-         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
          const data = { status: 'success', count: 5 };
 
          outputJSON(data);
@@ -17,7 +17,7 @@ describe('CLI Output Utilities', () => {
       });
 
       it('should handle nested objects', () => {
-         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
          const data = {
             user: { name: 'Test', tracks: [1, 2, 3] },
             status: 'ok'
@@ -31,7 +31,7 @@ describe('CLI Output Utilities', () => {
 
    describe('outputText', () => {
       it('should output plain text', () => {
-         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
          outputText('Hello World');
 
@@ -67,7 +67,7 @@ describe('CLI Output Utilities', () => {
 
    describe('outputSuccess', () => {
       it('should output success message with checkmark', () => {
-         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
          outputSuccess('Operation completed');
 
@@ -77,7 +77,7 @@ describe('CLI Output Utilities', () => {
 
    describe('outputError', () => {
       it('should output error message with X mark', () => {
-         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
          outputError('Operation failed');
 

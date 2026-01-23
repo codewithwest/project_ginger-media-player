@@ -1,17 +1,7 @@
 
 import { create } from 'zustand';
 
-interface LibraryTrack {
-  id: string;
-  path: string;
-  title: string;
-  artist?: string;
-  album?: string;
-  duration: number;
-  format: string;
-  dateAdded: number;
-  // metadata?: any;
-}
+import type { LibraryTrack } from '../../shared/types/app';
 
 interface LibraryStore {
   folders: string[];
@@ -24,7 +14,7 @@ interface LibraryStore {
   scanLibrary: () => Promise<void>;
 }
 
-export const useLibraryStore = create<LibraryStore>((set, get) => ({
+export const useLibraryStore = create<LibraryStore>((set) => ({
   folders: [],
   tracks: [],
   isLoading: false,

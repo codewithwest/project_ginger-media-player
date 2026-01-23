@@ -105,8 +105,16 @@ export class DownloadService {
           }
         } catch (e) { /* ignore */ }
 
+        // Define interface for yt-dlp info response
+        interface YtdlpInfo {
+          _type?: string;
+          title: string;
+          ext?: string;
+          entries?: Array<{ title: string }>;
+        }
+
         try {
-          const info: any = await this.ytdlp!.getInfoAsync(cleanedUrl, { noPlaylist: true } as any);
+          const info = await (this.ytdlp as YtDlp).getInfoAsync(cleanedUrl, { noPlaylist: true } as never) as YtdlpInfo;
 
           let rawTitle = '';
           if (info._type === 'playlist' && info.entries && info.entries[0]) {
@@ -117,7 +125,7 @@ export class DownloadService {
 
           if (rawTitle) {
             displayTitle = rawTitle.replace(/^Mix\s*-\s*/i, '').trim();
-            const ext = request.format === 'audio' ? 'mp3' : ((info as any).ext || 'webm');
+            const ext = request.format === 'audio' ? 'mp3' : (info.ext || 'webm');
 
             const safeName = displayTitle
               .replace(/[\\/:*?"<>|]/g, '')
@@ -153,7 +161,7 @@ export class DownloadService {
           return;
         }
 
-        await this.ytdlp!.downloadAsync(cleanedUrl, {
+        await (this.ytdlp as YtDlp).downloadAsync(cleanedUrl, {
           output: finalPath,
           format: request.format === 'audio' ? 'bestaudio/best' : 'bestvideo+bestaudio/best',
           noPlaylist: true,
@@ -203,11 +211,12 @@ export class DownloadService {
           title: displayTitle,
           outputFile: actualPath
         });
-      } catch (err: any) {
-        if (err.message && err.message.includes('signal: SIGKILL')) return;
-        console.error(`Download job ${jobId} failed:`, err);
-        onProgress({ status: 'failed', message: err.message });
-        throw err;
+      } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        if (error.message && error.message.includes('signal: SIGKILL')) return;
+        console.error(`Download job ${jobId} failed:`, error);
+        onProgress({ status: 'failed', message: error.message });
+        throw error;
       } finally {
         this.activeJobs.delete(jobId);
       }

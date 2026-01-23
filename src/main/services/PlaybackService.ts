@@ -1,6 +1,6 @@
 
 import { BrowserWindow, ipcMain } from 'electron';
-import { MediaSource, PlaybackStatus, RepeatMode, PlaybackState } from '../../shared/types/media';
+import { MediaSource, RepeatMode, PlaybackState } from '../../shared/types/media';
 import { PlaylistService } from './PlaylistService';
 
 export class PlaybackService {
@@ -15,7 +15,7 @@ export class PlaybackService {
    };
 
    private playlist: MediaSource[] = [];
-   private currentIndex: number = -1;
+   private currentIndex = -1;
 
    constructor(private mainWindow: BrowserWindow, private playlistService: PlaylistService) {
       this.playlist = this.playlistService.load();

@@ -1,8 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { X, FileText, ChevronRight, Tag, Calendar, Rocket, Code, Layers, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { Components } from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
+import { X, FileText, ChevronRight, Tag, Calendar, Rocket, Layers, CheckCircle2 } from 'lucide-react';
 
 export function ReleasesView({ onClose }: { onClose: () => void }) {
   const [releases, setReleases] = useState<string[]>([]);
@@ -44,36 +42,39 @@ export function ReleasesView({ onClose }: { onClose: () => void }) {
   };
 
   // Custom Markdown Components
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const MarkdownComponents: Components = {
-    h1: ({ node, ...props }: any) => (
+    h1: ({ node: _node, ...props }) => (
       <div className="mb-8 pb-4 border-b border-white/10">
         <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 animate-gradient-x" {...props} />
       </div>
     ),
-    h2: ({ node, ...props }: any) => (
+    h2: ({ node: _node, ...props }) => (
       <div className="mt-10 mb-6 flex items-center gap-3">
         <div className="h-8 w-1 bg-indigo-500 rounded-full" />
         <h2 className="text-2xl font-semibold text-white/90" {...props} />
       </div>
     ),
-    h3: ({ node, ...props }: any) => (
+    h3: ({ node: _node, ...props }) => (
       <h3 className="text-lg font-medium text-indigo-300 mt-6 mb-3 flex items-center gap-2" {...props} />
     ),
-    ul: ({ node, ...props }: any) => (
+    ul: ({ node: _node, ...props }) => (
       <ul className="space-y-3 mb-6" {...props} />
     ),
-    li: ({ node, children, ...props }: any) => (
+    li: ({ node: _node, children, ...props }) => (
       <li className="flex items-start gap-3 text-gray-300 group" {...props}>
         <CheckCircle2 className="w-5 h-5 text-indigo-500/50 mt-0.5 flex-shrink-0 group-hover:text-indigo-400 transition-colors" />
         <span className="leading-relaxed">{children}</span>
       </li>
     ),
-    p: ({ node, ...props }: any) => (
+    p: ({ node: _node, ...props }) => (
       <p className="text-gray-300 leading-7 mb-4" {...props} />
     ),
-    code: ({ node, inline, className, children, ...props }: any) => {
+    code: ({ node: _node, className, children, ...props }) => {
       const match = /language-(\w+)/.exec(className || '');
-      return !inline ? (
+      // Cast props to check for inline, as it might be passed but not in types
+      const isInline = (props as unknown as { inline?: boolean }).inline;
+      return !isInline ? (
         <div className="relative group my-6">
           <div className="absolute inset-0 bg-indigo-500/5 rounded-xl blur-lg group-hover:bg-indigo-500/10 transition-colors" />
           <div className="relative bg-[#1e1e1e] rounded-xl border border-white/10 overflow-hidden">
@@ -98,7 +99,7 @@ export function ReleasesView({ onClose }: { onClose: () => void }) {
         </code>
       );
     },
-    blockquote: ({ node, ...props }: any) => (
+    blockquote: ({ node: _node, ...props }) => (
       <div className="relative pl-6 py-2 my-6 border-l-4 border-indigo-500 bg-indigo-500/5 rounded-r-lg">
         <blockquote className="text-gray-300 italic" {...props} />
       </div>

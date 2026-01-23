@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import type { PlaylistItem } from '@shared/types';
 
 export class PlaylistService {
   private dataPath: string;
@@ -10,7 +11,7 @@ export class PlaylistService {
     this.dataPath = path.join(app.getPath('userData'), 'playlist.json');
   }
 
-  save(playlist: any[]) {
+  save(playlist: PlaylistItem[]): void {
     try {
       fs.writeFileSync(this.dataPath, JSON.stringify(playlist, null, 2));
     } catch (err) {
@@ -18,7 +19,7 @@ export class PlaylistService {
     }
   }
 
-  load(): any[] {
+  load(): PlaylistItem[] {
     try {
       if (fs.existsSync(this.dataPath)) {
         const raw = fs.readFileSync(this.dataPath, 'utf-8');

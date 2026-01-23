@@ -58,11 +58,12 @@ export class ConversionCommands {
                   outputText('');
                   outputSuccess(`Conversion complete: ${path.basename(output)}`);
                }
-            } catch (error: any) {
+            } catch (error: unknown) {
+               const err = error instanceof Error ? error : new Error(String(error));
                if (options.json) {
-                  outputJSON({ status: 'failed', error: error.message });
+                  outputJSON({ status: 'failed', error: err.message });
                } else {
-                  outputError(`Conversion failed: ${error.message}`);
+                  outputError(`Conversion failed: ${err.message}`);
                }
                process.exit(1);
             }

@@ -2,12 +2,13 @@
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log/main';
 import { BrowserWindow } from 'electron';
+import type { Logger } from 'electron-log';
 
 export class UpdateService {
   constructor(private mainWindow: BrowserWindow) {
     log.initialize();
     autoUpdater.logger = log;
-    (autoUpdater.logger as any).transports.file.level = 'info';
+    (autoUpdater.logger as Logger).transports.file.level = 'info';
 
     // Disable auto-download to give user control, or enable if preferred.
     // Let's enable auto-download for seamless experience but notify user.
@@ -63,7 +64,7 @@ export class UpdateService {
     autoUpdater.quitAndInstall();
   }
 
-  private send(channel: string, ...args: any[]) {
+  private send(channel: string, ...args: unknown[]): void {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.webContents.send(channel, ...args);
     }

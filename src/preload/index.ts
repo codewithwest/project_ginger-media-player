@@ -1,7 +1,19 @@
 // Preload script - Exposes safe IPC API to renderer via contextBridge
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { IpcRequest, IpcResponse, IpcEventData } from '@shared/types';
+import type {
+  IpcRequest,
+  IpcResponse,
+  IpcEventData,
+  PlaylistItem,
+  MediaMetadata,
+  MediaPlayerState,
+  ConversionRequest,
+  LibraryTrack,
+  AppSettings,
+  UpdateStatus,
+  UpdateProgress,
+} from '@shared/types';
 
 // Create type-safe API
 const electronAPI = {
@@ -25,7 +37,7 @@ const electronAPI = {
       ipcRenderer.invoke('playback:set-shuffle', shuffle),
     setRepeat: (repeat: string): Promise<void> =>
       ipcRenderer.invoke('playback:set-repeat', repeat),
-    addToPlaylist: (item: any, playNow?: boolean): Promise<void> =>
+    addToPlaylist: (item: PlaylistItem, playNow?: boolean): Promise<void> =>
       ipcRenderer.invoke('playback:add-to-playlist', { item, playNow }),
     clearPlaylist: (): Promise<void> =>
       ipcRenderer.invoke('playback:clear-playlist'),
@@ -37,18 +49,18 @@ const electronAPI = {
     // Media Engine (Main process services)
     getStreamUrl: (filePath: string): Promise<string> =>
       ipcRenderer.invoke('media:get-stream-url', { filePath }),
-    getMetadata: (filePath: string): Promise<any> =>
+    getMetadata: (filePath: string): Promise<MediaMetadata> =>
       ipcRenderer.invoke('media:get-metadata', { filePath }),
     getSubtitlesUrl: (filePath: string): Promise<string> =>
       ipcRenderer.invoke('media:get-subtitles-url', { filePath }),
 
     // Event listeners
-    onStateChanged: (callback: (state: any) => void) => {
-      const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
+    onStateChanged: (callback: (state: MediaPlayerState) => void) => {
+      const subscription = (_event: IpcRendererEvent, data: MediaPlayerState) => callback(data);
       ipcRenderer.on('playback:state-changed', subscription);
       return () => { ipcRenderer.removeListener('playback:state-changed', subscription); };
     },
-    getState: (): Promise<any> => ipcRenderer.invoke('playback:get-state'),
+    getState: (): Promise<MediaPlayerState> => ipcRenderer.invoke('playback:get-state'),
   },
 
   // File operations
@@ -62,13 +74,13 @@ const electronAPI = {
       ipcRenderer.on('file:open-from-cli', subscription);
       return () => { ipcRenderer.removeListener('file:open-from-cli', subscription); };
     },
-    savePlaylist: (playlist: any[]) => ipcRenderer.invoke('playlist:save', { playlist }),
+    savePlaylist: (playlist: PlaylistItem[]) => ipcRenderer.invoke('playlist:save', { playlist }),
     loadPlaylist: () => ipcRenderer.invoke('playlist:load'),
   },
 
   // Job management
   jobs: {
-    startConversion: (request: any) =>
+    startConversion: (request: ConversionRequest) =>
       ipcRenderer.invoke('job:start-conversion', request),
     startDownload: (request: IpcRequest<'job:start-download'>): Promise<{ jobId: string }> =>
       ipcRenderer.invoke('job:start-download', request),
@@ -94,10 +106,10 @@ const electronAPI = {
 
   // Library
   library: {
-    addFolder: (path: string): Promise<any> => ipcRenderer.invoke('library:add-folder', { path }),
-    removeFolder: (path: string): Promise<any> => ipcRenderer.invoke('library:remove-folder', { path }),
-    scan: (): Promise<any> => ipcRenderer.invoke('library:scan'),
-    getAll: (): Promise<any[]> => ipcRenderer.invoke('library:get-all'),
+    addFolder: (path: string): Promise<void> => ipcRenderer.invoke('library:add-folder', { path }),
+    removeFolder: (path: string): Promise<void> => ipcRenderer.invoke('library:remove-folder', { path }),
+    scan: (): Promise<LibraryTrack[]> => ipcRenderer.invoke('library:scan'),
+    getAll: (): Promise<LibraryTrack[]> => ipcRenderer.invoke('library:get-all'),
     getFolders: (): Promise<string[]> => ipcRenderer.invoke('library:get-folders'),
     pickFolder: (): Promise<string | null> => ipcRenderer.invoke('library:pick-folder'),
   },
@@ -119,13 +131,13 @@ const electronAPI = {
     checkForUpdates: () => ipcRenderer.invoke('update:check'),
     downloadUpdate: () => ipcRenderer.invoke('update:download'),
     installUpdate: () => ipcRenderer.invoke('update:install'),
-    onStatusChange: (callback: (data: { status: string, info?: any, error?: string }) => void) => {
-      const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
+    onStatusChange: (callback: (data: UpdateStatus) => void) => {
+      const subscription = (_event: IpcRendererEvent, data: UpdateStatus) => callback(data);
       ipcRenderer.on('update:status', subscription);
       return () => { ipcRenderer.removeListener('update:status', subscription); };
     },
-    onProgress: (callback: (data: any) => void) => {
-      const subscription = (_event: IpcRendererEvent, data: any) => callback(data);
+    onProgress: (callback: (data: UpdateProgress) => void) => {
+      const subscription = (_event: IpcRendererEvent, data: UpdateProgress) => callback(data);
       ipcRenderer.on('update:progress', subscription);
       return () => { ipcRenderer.removeListener('update:progress', subscription); };
     },
@@ -142,8 +154,8 @@ const electronAPI = {
     getDownloadsPath: (): Promise<string> => ipcRenderer.invoke('app:get-downloads-path'),
   },
   settings: {
-    get: (): Promise<any> => ipcRenderer.invoke('settings:get'),
-    update: (updates: any): Promise<any> => ipcRenderer.invoke('settings:update', updates),
+    get: (): Promise<AppSettings> => ipcRenderer.invoke('settings:get'),
+    update: (updates: Partial<AppSettings>): Promise<AppSettings> => ipcRenderer.invoke('settings:update', updates),
   },
 };
 

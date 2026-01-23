@@ -1,12 +1,12 @@
-import type { ConfigEnv, UserConfig } from 'vite';
+import type { UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config
 export default defineConfig((env) => {
-  const { root, mode } = env;
+  const { mode } = env;
   
   return {
-    root,
+    root: process.cwd(),
     mode,
     build: {
       outDir: '.vite/build',

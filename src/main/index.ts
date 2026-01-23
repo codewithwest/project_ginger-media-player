@@ -1,5 +1,10 @@
 
 import { app, BrowserWindow, ipcMain, dialog, globalShortcut } from 'electron';
+
+// Extend electron App interface
+interface ExtendedApp extends Electron.App {
+  isQuitting?: boolean;
+}
 import path from 'path';
 import { MediaServer } from './services/MediaServer';
 import { TrayService } from './services/TrayService';
@@ -96,7 +101,7 @@ const createWindow = (): void => {
 
   // Handle window close - keep app running for background playback
   mainWindow.on('close', (event) => {
-    if (!(app as any).isQuitting) {
+    if (!(app as ExtendedApp).isQuitting) {
       event.preventDefault();
       mainWindow?.hide();
       console.log('[Main] Window hidden (background mode)');
@@ -117,15 +122,15 @@ async function registerIpcHandlers(): Promise<void> {
   // Initialize Services
   settingsService = new SettingsService();
   playlistService = new PlaylistService();
-  playbackService = new PlaybackService(mainWindow!, playlistService);
+  playbackService = new PlaybackService(mainWindow as BrowserWindow, playlistService);
 
-  const jobManager = new JobManager(mainWindow!, settingsService);
+  const jobManager = new JobManager(mainWindow as BrowserWindow, settingsService);
   const ffmpegPath = downloadService?.getFFmpegPath();
   const ffprobePath = downloadService?.getFFprobePath();
 
   const conversionService = new ConversionService(ffmpegPath);
   libraryService = new LibraryService(ffprobePath);
-  updateService = new UpdateService(mainWindow!);
+  updateService = new UpdateService(mainWindow as BrowserWindow);
   new ReleaseService();
 
   jobManager.registerService('conversion', conversionService);
@@ -140,7 +145,8 @@ async function registerIpcHandlers(): Promise<void> {
   });
 
   ipcMain.handle('library:pick-folder', async () => {
-    const result = await dialog.showOpenDialog(mainWindow!, {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory']
     });
     if (result.canceled || result.filePaths.length === 0) return null;
@@ -190,7 +196,8 @@ async function registerIpcHandlers(): Promise<void> {
 
   // File operations
   ipcMain.handle('file:open-dialog', async () => {
-    const result = await dialog.showOpenDialog(mainWindow!, {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile', 'multiSelections'],
       filters: [
         { name: 'Media Files', extensions: ['mp3', 'mp4', 'mkv', 'avi', 'flac', 'wav', 'webm', 'm4a', 'ogg'] },
@@ -294,9 +301,11 @@ function registerGlobalShortcuts(): void {
   globalShortcut.register('MediaPreviousTrack', () => playbackService?.previous());
 
   // Listen for signals from Tray or other modules
-  app.on('playback:toggle' as any, () => playbackService?.toggle());
-  app.on('playback:next' as any, () => playbackService?.next());
-  app.on('playback:previous' as any, () => playbackService?.previous());
+  // Listen for signals from Tray or other modules using Node EventEmitter
+  // properly cast to avoid 'any' if possible, or use specific strings
+  app.on('playback:toggle' as 'activate', () => playbackService?.toggle()); 
+  app.on('playback:next' as 'activate', () => playbackService?.next());
+  app.on('playback:previous' as 'activate', () => playbackService?.previous());
 }
 
 if (!gotTheLock) {
@@ -361,7 +370,7 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-  (app as any).isQuitting = true;
+  (app as ExtendedApp).isQuitting = true;
 });
 
 app.on('will-quit', () => {

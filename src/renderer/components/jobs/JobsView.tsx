@@ -16,7 +16,7 @@ export function JobsView() {
       // But shared type for IPC event data is just JobProgress? 
       // Actually main emits 'job:progress' with `job`. 
       // Let's assume it maps correctly.
-      updateJob(data as any); 
+      updateJob(data); 
     });
 
     return cleanup;

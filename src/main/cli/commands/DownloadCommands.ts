@@ -56,11 +56,12 @@ export class DownloadCommands {
                   outputText('');
                   outputSuccess('Download complete');
                }
-            } catch (error: any) {
+            } catch (error: unknown) {
+               const err = error instanceof Error ? error : new Error(String(error));
                if (options.json) {
-                  outputJSON({ status: 'failed', error: error.message });
+                  outputJSON({ status: 'failed', error: err.message });
                } else {
-                  outputError(`Download failed: ${error.message}`);
+                  outputError(`Download failed: ${err.message}`);
                }
                process.exit(1);
             }

@@ -1,12 +1,18 @@
 import { BrowserWindow } from 'electron';
 import { Job, JobProgress, ConversionRequest, DownloadRequest } from '../../shared/types/media';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { SettingsService } from './SettingsService';
+
+// Service interface for job execution
+interface JobService {
+  start(jobId: string, request: ConversionRequest | DownloadRequest, onProgress: (progress: Partial<JobProgress>) => void): Promise<void>;
+  cancel(jobId: string): void;
+}
 
 export class JobManager {
   private jobs: Map<string, Job> = new Map();
   private mainWindow: BrowserWindow | null = null;
-  private services: Record<string, any> = {};
+  private services: Partial<Record<'conversion' | 'download', JobService>> = {};
   private settingsService: SettingsService;
 
   constructor(mainWindow: BrowserWindow, settingsService: SettingsService) {
@@ -20,12 +26,12 @@ export class JobManager {
     });
   }
 
-  registerService(type: 'conversion' | 'download', service: any) {
+  registerService(type: 'conversion' | 'download', service: JobService): void {
     this.services[type] = service;
   }
 
   async startConversion(request: ConversionRequest): Promise<string> {
-    const jobId = uuidv4();
+    const jobId = randomUUID();
     const job: Job = {
       jobId,
       type: 'conversion',
@@ -41,9 +47,10 @@ export class JobManager {
 
     // Provide a callback or event listener for the service to update progress
     // In a real app, this might be decoupled via events, but direct call is simple for now
-    if (this.services['conversion']) {
+    const conversionService = this.services['conversion'];
+    if (conversionService) {
       // Async execution
-      this.services['conversion'].start(jobId, request, (progress: Partial<JobProgress>) => {
+      conversionService.start(jobId, request, (progress: Partial<JobProgress>) => {
         this.updateJob(jobId, progress);
       }).catch((err: Error) => {
         this.updateJob(jobId, { status: 'failed', message: err.message, error: err.message });
@@ -54,7 +61,7 @@ export class JobManager {
   }
 
   async startDownload(request: DownloadRequest): Promise<string> {
-    const jobId = uuidv4();
+    const jobId = randomUUID();
     const job: Job = {
       jobId,
       type: 'download',
@@ -69,8 +76,9 @@ export class JobManager {
     console.log(`[JobManager] Starting download job: ${jobId}`, request.url);
     this.emitProgress(job);
 
-    if (this.services['download']) {
-      this.services['download'].start(jobId, request, (progress: Partial<JobProgress>) => {
+    const downloadService = this.services['download'];
+    if (downloadService) {
+      downloadService.start(jobId, request, (progress: Partial<JobProgress>) => {
         this.updateJob(jobId, progress);
       }).catch((err: Error) => {
         this.updateJob(jobId, { status: 'failed', message: err.message, error: err.message });
@@ -84,8 +92,9 @@ export class JobManager {
     const job = this.jobs.get(jobId);
     if (job && (job.status === 'running' || job.status === 'queued')) {
       // Notify service to cancel
-      if (this.services[job.type]) {
-        this.services[job.type].cancel(jobId);
+      const service = this.services[job.type];
+      if (service) {
+        service.cancel(jobId);
       }
       this.updateJob(jobId, { status: 'cancelled', message: 'Cancelled by user' });
     }

@@ -1,6 +1,11 @@
 
 import { create } from 'zustand';
 
+// Extend Window interface for webkitAudioContext
+interface CustomWindow extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 interface AudioEngineState {
    audioContext: AudioContext | null;
    sourceNode: MediaElementAudioSourceNode | null;
@@ -29,7 +34,7 @@ export const useAudioEngine = create<AudioEngineState>((set, get) => ({
       let { audioContext, sourceNode, analyser, eqNodes } = get();
 
       if (!audioContext) {
-         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+         audioContext = new (window.AudioContext || (window as unknown as CustomWindow).webkitAudioContext as typeof AudioContext)();
       }
 
       // Connect source
@@ -53,7 +58,7 @@ export const useAudioEngine = create<AudioEngineState>((set, get) => ({
       // Create EQ nodes if not exists
       if (eqNodes.length === 0) {
          eqNodes = BANDS.map((freq, i) => {
-            const node = audioContext!.createBiquadFilter();
+            const node = (audioContext as AudioContext).createBiquadFilter();
             if (i === 0) {
                node.type = 'lowshelf';
             } else if (i === BANDS.length - 1) {
@@ -69,7 +74,7 @@ export const useAudioEngine = create<AudioEngineState>((set, get) => ({
       }
 
       // Chain: Source -> EQ1 -> EQ2 -> ... -> EQN -> Analyser -> Destination
-      let lastNode: AudioNode = sourceNode!;
+      let lastNode: AudioNode = sourceNode as AudioNode;
       eqNodes.forEach(node => {
          lastNode.connect(node);
          lastNode = node;

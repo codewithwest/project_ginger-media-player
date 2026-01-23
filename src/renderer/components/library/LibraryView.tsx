@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLibraryStore } from '../../state/library';
 import { useMediaPlayerStore } from '../../state/media-player';
 import { FolderPlus, Music, Play, X, Loader2, FileAudio, LayoutGrid, List } from 'lucide-react';
+import type { LibraryTrack } from '@shared/types';
 
 export function LibraryView({ onClose }: { onClose: () => void }) {
   const { folders, tracks, isLoading, loadLibrary, addFolder, removeFolder, scanLibrary } = useLibraryStore();
@@ -12,7 +13,7 @@ export function LibraryView({ onClose }: { onClose: () => void }) {
     loadLibrary();
   }, [loadLibrary]);
 
-  const handlePlay = (track: any) => {
+  const handlePlay = (track: LibraryTrack) => {
     addToPlaylist({
       id: track.id,
       path: track.path,
@@ -23,7 +24,7 @@ export function LibraryView({ onClose }: { onClose: () => void }) {
     }, true); // Play immediately
   };
 
-  const handleConvert = async (track: any) => {
+  const handleConvert = async (track: LibraryTrack) => {
     const outputPath = track.path.replace(/\.[^/.]+$/, "") + ".mp3";
     try {
       await window.electronAPI.jobs.startConversion({

@@ -1,6 +1,7 @@
 
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import fs from 'fs/promises';
+import { statSync } from 'fs';
 import path from 'path';
 
 export class ReleaseService {
@@ -10,23 +11,14 @@ export class ReleaseService {
     // Determine path to docs based on environment
     // In dev: project_root/docs
     // In prod: resources/docs
-    const isDev = !process.isPacked; 
-    // process.isPacked is undefined usually? Electron uses helper.
-    // Better check: process.resourcesPath contains 'resources' usually.
-    // Or check if we are running in node via vite.
-    
-    // Standard electron check:
-    const resourcesPath = process.resourcesPath;
-    const appPath = process.cwd(); // In dev this is root.
-    
-    // In production, extraResource copies './docs' to 'resources/docs' (on mac/linux usually inside Contents or near executable).
-    // On Linux: /usr/lib/app/resources/docs
+    const isDev = !app.isPackaged;
+    const appPath = process.cwd(); 
     
     // Let's try finding it.
     this.docsPath = path.join(process.resourcesPath, 'docs'); // Prod
     
     // Fallback for dev
-    if (process.env.NODE_ENV === 'development' || !this.checkExists(this.docsPath)) {
+    if (isDev || !this.checkExists(this.docsPath)) {
         this.docsPath = path.resolve(appPath, 'docs');
     }
 
@@ -45,7 +37,7 @@ export class ReleaseService {
 
   private checkExists(dir: string): boolean {
       try {
-          const stat = require('fs').statSync(dir); // Sync check for init
+          const stat = statSync(dir); // Sync check for init
           return stat.isDirectory();
       } catch {
           return false;

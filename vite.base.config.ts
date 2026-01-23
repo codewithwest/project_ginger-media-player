@@ -1,12 +1,9 @@
-import type { AddressInfo } from 'net';
 import type { ConfigEnv, Plugin, UserConfig } from 'vite';
-import type { InputOption } from 'rollup';
-import path from 'path';
 
 export const external = ['electron'];
 
 export function getBuildConfig(env: ConfigEnv<'build'>, config?: UserConfig): UserConfig {
-  const { root, mode, command } = env;
+  const { root, mode } = env;
 
   return {
     root,
@@ -52,5 +49,6 @@ export function pluginExposeRenderer(name: string): Plugin {
 }
 
 declare global {
+  // eslint-disable-next-line no-var
   var viteDevServers: Record<string, import('vite').ViteDevServer>;
 }

@@ -1,8 +1,9 @@
 
+// Main React application component
 import { create } from 'zustand';
-import type { PlaybackState, MediaSource, MediaMetadata } from '../../shared/types/media';
+import type { PlaybackState, MediaSource, MediaMetadata, MediaPlayerState } from '../../shared/types/media';
 
-interface MediaPlayerStore extends PlaybackState {
+interface MediaPlayerStore extends MediaPlayerState {
   playlist: MediaSource[];
   currentIndex: number;
   streamUrl?: string;
@@ -111,7 +112,7 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
     window.electronAPI.media.addToPlaylist(item, playNow);
   },
 
-  removeFromPlaylist: (index) => {
+  removeFromPlaylist: () => {
     // TODO: Implement in PlaybackService
   },
 

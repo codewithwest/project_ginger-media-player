@@ -10,6 +10,7 @@ export default defineConfig(async (env) => {
   const name = forgeConfigSelf.name ?? '';
 
   // Dynamic import to handle ESM-only module
+  // eslint-disable-next-line import/no-unresolved
   const { default: react } = await import('@vitejs/plugin-react');
 
   return {

@@ -21,7 +21,7 @@ interface JobDashboardProps {
 
 export function JobDashboard({ onClose }: JobDashboardProps) {
    const { jobs, removeJob, clearHistory } = useJobsStore();
-   const { addToPlaylist, playAtIndex } = useMediaPlayerStore();
+   const { addToPlaylist } = useMediaPlayerStore();
    const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
    const activeJobs = jobs.filter(j => j.status === 'running' || j.status === 'queued');
@@ -31,12 +31,12 @@ export function JobDashboard({ onClose }: JobDashboardProps) {
 
    const handlePlayJob = (job: Job) => {
       if (job.status === 'completed') {
-         const filePath = job.outputFile || (job.details as any).outputPath;
+         const filePath = job.outputFile || job.details.outputPath;
 
          console.log(`[JobDashboard] Attempting to play job: ${job.jobId}`, {
             title: job.title,
             outputFile: job.outputFile,
-            fallbackPath: (job.details as any).outputPath
+            fallbackPath: job.details.outputPath
          });
 
          if (filePath && !filePath.includes('%') && filePath.length > 5) {

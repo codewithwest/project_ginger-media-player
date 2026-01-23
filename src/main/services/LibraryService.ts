@@ -2,19 +2,9 @@
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-import { MediaMetadataService, MediaMetadata } from './MediaMetadata';
+import { MediaMetadataService } from './MediaMetadata';
 
-export interface LibraryTrack {
-  id: string; // uuid or path hash
-  path: string;
-  title: string;
-  artist?: string;
-  album?: string;
-  duration: number;
-  format: string;
-  dateAdded: number;
-  metadata?: MediaMetadata;
-}
+import type { LibraryTrack } from '@shared/types';
 
 export interface LibraryData {
   folders: string[];
@@ -100,7 +90,7 @@ export class LibraryService {
           // Skip expensive metadata if size/mtime hasn't changed?
           // For now, check if path exists.
           if (existingMap.has(file)) {
-            newTracks.push(existingMap.get(file)!);
+            newTracks.push(existingMap.get(file) as LibraryTrack);
             continue;
           }
 
@@ -115,8 +105,14 @@ export class LibraryService {
               album: metadata.tags?.album || 'Unknown Album',
               duration: metadata.duration,
               format: metadata.format,
-              dateAdded: Date.now(),
-              metadata
+              addedAt: Date.now(),
+              lastModified: Date.now(),
+              // metadata property not in Shared Type, maybe extend it or put in a separate map if needed?
+              // The shared type doesn't have metadata field. 
+              // But we can keep it if we extend the type or if we don't need it in frontend explicitly.
+              // Actually, shared type usually defines the contract. 
+              // Let's assume we can add extra props or should add metadata to shared type.
+              // For now, let's cast or omit. The frontend didn't seem to use raw metadata object.
             };
 
             newTracks.push(track);

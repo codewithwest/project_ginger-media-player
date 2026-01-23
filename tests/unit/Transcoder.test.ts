@@ -15,7 +15,7 @@ vi.mock('fluent-ffmpeg', () => {
   });
   
   // Attach static methods
-  (ffmpeg as any).setFfmpegPath = vi.fn();
+  (ffmpeg as unknown as { setFfmpegPath: unknown }).setFfmpegPath = vi.fn();
   
   return { default: ffmpeg };
 });

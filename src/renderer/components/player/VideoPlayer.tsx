@@ -72,8 +72,8 @@ export function VideoPlayer() {
     next();
   };
 
-  const handleError = (e: any) => {
-    const error = e.target.error;
+  const handleError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const error = e.currentTarget.error;
     console.error("Video player error:", {
       code: error?.code,
       message: error?.message,

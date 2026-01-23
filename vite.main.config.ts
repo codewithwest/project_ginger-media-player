@@ -1,4 +1,4 @@
-import type { ConfigEnv, UserConfig } from 'vite';
+import type { UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config
