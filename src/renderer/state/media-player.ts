@@ -24,6 +24,7 @@ interface MediaPlayerStore extends MediaPlayerState {
   previous: () => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  setSpeed: (speed: number) => void;
 
   loadPlaylist: () => Promise<void>;
   addToPlaylist: (item: MediaSource, playNow?: boolean) => void;
@@ -41,6 +42,7 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
   volume: 1.0,
   shuffle: false,
   repeat: 'off',
+  playbackSpeed: 1.0,
   streamUrl: undefined,
   metadata: undefined,
   playlist: [],
@@ -101,6 +103,11 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
     const modes = ['off', 'one', 'all'];
     const nextMode = modes[(modes.indexOf(repeat) + 1) % modes.length];
     window.electronAPI.media.setRepeat(nextMode);
+  },
+
+  setSpeed: (speed) => {
+    set({ playbackSpeed: speed });
+    window.electronAPI.media.setSpeed(speed);
   },
 
   loadPlaylist: async () => {

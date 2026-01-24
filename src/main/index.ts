@@ -135,6 +135,10 @@ async function registerIpcHandlers(): Promise<void> {
     pluginService?.broadcastEvent('playback:state-changed', state);
   });
 
+  pluginService?.on('ui-updated', () => {
+    mainWindow?.webContents.send('plugins:ui-updated', pluginService?.getRegisteredTabs());
+  });
+
   // Network Event Listeners
   if (networkManager) {
     networkManager.onServerFound((server) => {
@@ -346,6 +350,11 @@ async function registerIpcHandlers(): Promise<void> {
 
   ipcMain.handle('network:connect-smb', async (_event, config) => {
     await networkManager?.connectSMB(config);
+  });
+
+  // Plugin Handlers
+  ipcMain.handle('plugins:get-ui-tabs', () => {
+    return pluginService?.getRegisteredTabs() || [];
   });
 }
 

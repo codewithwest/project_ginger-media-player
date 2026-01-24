@@ -17,6 +17,7 @@ import type {
   NetworkServer,
   MediaSource,
   SMBConfig,
+  PluginUITab,
 } from '@shared/types';
 
 // Create type-safe API
@@ -41,6 +42,8 @@ const electronAPI = {
       ipcRenderer.invoke('playback:set-shuffle', shuffle),
     setRepeat: (repeat: string): Promise<void> =>
       ipcRenderer.invoke('playback:set-repeat', repeat),
+    setSpeed: (speed: number): Promise<void> =>
+      ipcRenderer.invoke('playback:set-speed', speed),
     addToPlaylist: (item: PlaylistItem, playNow?: boolean): Promise<void> =>
       ipcRenderer.invoke('playback:add-to-playlist', { item, playNow }),
     clearPlaylist: (): Promise<void> =>
@@ -161,6 +164,18 @@ const electronAPI = {
         const subscription = (_event: IpcRendererEvent, server: NetworkServer) => callback(server);
         ipcRenderer.on('network:server-found', subscription);
         return () => { ipcRenderer.removeListener('network:server-found', subscription); };
+    },
+  },
+
+
+
+  // Plugins
+  plugins: {
+    getUITabs: (): Promise<PluginUITab[]> => ipcRenderer.invoke('plugins:get-ui-tabs'),
+    onUIUpdated: (callback: (tabs: PluginUITab[]) => void) => {
+        const subscription = (_event: IpcRendererEvent, tabs: PluginUITab[]) => callback(tabs);
+        ipcRenderer.on('plugins:ui-updated', subscription);
+        return () => { ipcRenderer.removeListener('plugins:ui-updated', subscription); };
     },
   },
 

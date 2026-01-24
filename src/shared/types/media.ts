@@ -25,6 +25,7 @@ export interface PlaybackState {
   volume: number;
   shuffle: boolean;
   repeat: RepeatMode;
+  playbackSpeed: number;
 }
 
 export interface MediaPlayerState extends PlaybackState {
@@ -108,4 +109,12 @@ export interface SMBConfig {
   domain?: string;
   username?: string;
   password?: string;
+}
+
+export interface PluginUITab {
+    id: string;
+    pluginName?: string;
+    title: string;
+    icon: string;
+    route: string;
 }

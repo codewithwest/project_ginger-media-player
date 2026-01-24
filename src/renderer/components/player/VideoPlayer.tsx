@@ -16,7 +16,8 @@ export function VideoPlayer() {
     play,
     pause,
     next,
-    currentSource
+    currentSource,
+    playbackSpeed,
   } = useMediaPlayerStore();
 
   // Sync Play/Pause/Stop status
@@ -40,6 +41,13 @@ export function VideoPlayer() {
     if (!video) return;
     video.volume = volume;
   }, [volume]);
+
+  // Sync Playback Speed
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = playbackSpeed;
+  }, [playbackSpeed]);
 
   // Sync Seek (Position) - careful to avoid loops
   useEffect(() => {

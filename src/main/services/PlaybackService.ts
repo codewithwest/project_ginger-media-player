@@ -12,7 +12,8 @@ export class PlaybackService extends EventEmitter {
       duration: 0,
       volume: 1.0,
       shuffle: false,
-      repeat: 'off'
+      repeat: 'off',
+      playbackSpeed: 1.0
    };
 
    private playlist: MediaSource[] = [];
@@ -35,6 +36,7 @@ export class PlaybackService extends EventEmitter {
       ipcMain.handle('playback:set-volume', (_event, volume: number) => this.setVolume(volume));
       ipcMain.handle('playback:set-shuffle', (_event, shuffle: boolean) => this.setShuffle(shuffle));
       ipcMain.handle('playback:set-repeat', (_event, repeat: RepeatMode) => this.setRepeat(repeat));
+      ipcMain.handle('playback:set-speed', (_event, speed: number) => this.setSpeed(speed));
 
       // State sync
       ipcMain.handle('playback:get-state', () => ({
@@ -164,6 +166,11 @@ export class PlaybackService extends EventEmitter {
 
    public setRepeat(repeat: RepeatMode) {
       this.state.repeat = repeat;
+      this.notifyStateChanged();
+   }
+
+   public setSpeed(speed: number) {
+      this.state.playbackSpeed = speed;
       this.notifyStateChanged();
    }
 

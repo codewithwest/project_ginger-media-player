@@ -5,8 +5,9 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi, Puzzle } from 'lucide-react';
 import { NetworkView } from './components/network/NetworkView';
+import { usePluginStore } from './state/plugins';
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { JobDashboard } from './components/jobs/JobDashboard';
@@ -22,6 +23,7 @@ interface CustomCSSProperties extends CSSProperties {
 export function App() {
   const { addToPlaylist, playAtIndex, playlist, status, streamUrl } = useMediaPlayerStore();
   const { syncJobs, initializeListeners } = useJobsStore();
+  const { tabs: pluginTabs, init: initPlugins } = usePluginStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
 
@@ -58,6 +60,9 @@ export function App() {
     // Sync jobs and start listening
     syncJobs();
     const cleanJobs = initializeListeners();
+
+    // Initialize Plugins
+    initPlugins();
 
     return () => {
       cleanStatus();
@@ -145,6 +150,18 @@ export function App() {
           >
             <ListMusic className="w-4 h-4" />
           </button>
+
+          {/* Plugin Tabs */}
+          {pluginTabs.map(tab => (
+            <button
+               key={tab.id}
+               className="p-1.5 rounded-lg hover:bg-white/10 transition-all text-gray-400"
+               title={`${tab.title} (Plugin)`}
+               onClick={() => console.log(`Opening plugin tab: ${tab.id}`)}
+            >
+               <Puzzle className="w-4 h-4" />
+            </button>
+          ))}
         </div>
       </div>
 

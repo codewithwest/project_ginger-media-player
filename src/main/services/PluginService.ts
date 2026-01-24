@@ -2,6 +2,7 @@ import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { EventEmitter } from 'events';
+import { PluginUITab } from '../../shared/types/media';
 
 export interface PluginManifest {
     name: string;
@@ -22,6 +23,7 @@ export interface Plugin {
 export class PluginService extends EventEmitter {
     private pluginsPath: string;
     private plugins: Map<string, Plugin> = new Map();
+    private uiRegistry: PluginUITab[] = [];
 
     constructor() {
         super();
@@ -82,6 +84,12 @@ export class PluginService extends EventEmitter {
                         events: {
                             on: (event: string, callback: any) => this.on(`ext:${event}`, callback),
                             emit: (event: string, data: any) => this.emit(`ext:${event}`, data)
+                        },
+                        ui: {
+                            registerTab: (tab: PluginUITab) => {
+                                this.uiRegistry.push({ ...tab, pluginName: name });
+                                this.emit('ui-updated');
+                            }
                         }
                     };
 
@@ -114,5 +122,9 @@ export class PluginService extends EventEmitter {
      */
     public broadcastEvent(event: string, data: any) {
         this.emit(`ext:${event}`, data);
+    }
+
+    public getRegisteredTabs(): PluginUITab[] {
+        return this.uiRegistry;
     }
 }

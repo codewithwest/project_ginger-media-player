@@ -1,4 +1,4 @@
-import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Volume2, Maximize, ListMusic, SlidersHorizontal } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, Shuffle, Repeat, Volume2, Maximize, ListMusic, SlidersHorizontal, Gauge } from 'lucide-react';
 import { useMediaPlayerStore } from '../../state/media-player';
 
 interface PlayerControlsProps {
@@ -23,6 +23,8 @@ export function PlayerControls({ onToggleQueue, queueVisible, onToggleEqualizer 
     toggleShuffle,
     toggleRepeat,
     setVolume,
+    playbackSpeed,
+    setSpeed,
   } = useMediaPlayerStore();
 
   const isPlaying = status === 'playing';
@@ -166,6 +168,19 @@ export function PlayerControls({ onToggleQueue, queueVisible, onToggleEqualizer 
             title="Equalizer"
           >
             <SlidersHorizontal className="w-4 h-4" />
+          </button>
+          
+          <button
+            onClick={() => {
+                const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+                const nextIndex = (speeds.indexOf(playbackSpeed) + 1) % speeds.length;
+                setSpeed(speeds[nextIndex]);
+            }}
+            className="flex items-center gap-1.5 px-2 py-1 bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/5"
+            title="Playback Speed"
+          >
+            <Gauge className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-[10px] font-bold text-gray-300 font-mono w-8 text-left">{playbackSpeed}x</span>
           </button>
 
           <button
