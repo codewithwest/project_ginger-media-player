@@ -131,7 +131,7 @@ export const useMediaPlayerStore = create<MediaPlayerStore>((set, get) => ({
 
     const item = playlist[index];
     try {
-      const url = await window.electronAPI.media.getStreamUrl(item.path);
+      const url = await window.electronAPI.media.getStreamUrl(item);
       const metadata = await window.electronAPI.media.getMetadata(item.path);
       const resumePos = await window.electronAPI.media.getResumePosition(item.id);
 

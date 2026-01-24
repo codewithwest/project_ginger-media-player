@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLibraryStore } from '../../state/library';
 import { useMediaPlayerStore } from '../../state/media-player';
 import { FolderPlus, Music, Play, X, Loader2, FileAudio, LayoutGrid, List } from 'lucide-react';
+import { List as VirtualList } from 'react-window';
+import { AutoSizer } from 'react-virtualized-auto-sizer';
 import type { LibraryTrack } from '@shared/types';
 
 export function LibraryView({ onClose }: { onClose: () => void }) {
@@ -18,6 +20,7 @@ export function LibraryView({ onClose }: { onClose: () => void }) {
       id: track.id,
       path: track.path,
       type: 'local',
+      mediaType: track.mediaType || 'audio',
       title: track.title,
       artist: track.artist,
       duration: track.duration
@@ -149,70 +152,50 @@ export function LibraryView({ onClose }: { onClose: () => void }) {
               <p className="text-sm text-gray-500 mt-1">Add a folder to start scanning your media.</p>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto no-scrollbar pr-2">
-              {viewMode === 'grid' ? (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
-                  {tracks.map((track, index) => (
-                    <div key={track.id || index} className="group bg-black/40 hover:bg-white/5 p-4 rounded-2xl transition-all border border-white/5 hover:border-white/10 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <Music className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold truncate text-sm text-gray-200" title={track.title}>{track.title}</h3>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">{track.artist || 'Unknown Artist'}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button
-                          onClick={() => handleConvert(track)}
-                          className="p-2 hover:bg-white/10 rounded-xl transition-all text-gray-400 hover:text-white"
-                          title="Convert to MP3"
-                        >
-                          <FileAudio className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handlePlay(track)}
-                          className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-90"
-                          title="Play Track"
-                        >
-                          <Play className="w-5 h-5 fill-white text-white" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {tracks.map((track, index) => (
-                    <div key={track.id || index} className="group bg-black/40 hover:bg-white/5 p-3 rounded-xl transition-all border border-white/5 hover:border-white/10 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 flex-shrink-0">
-                        <Music className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate text-sm text-gray-200" title={track.title}>{track.title}</h3>
-                        <p className="text-xs text-gray-500 font-medium">{track.artist || 'Unknown Artist'}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button
-                          onClick={() => handleConvert(track)}
-                          className="p-2 hover:bg-white/10 rounded-lg transition-all text-gray-400 hover:text-white"
-                          title="Convert to MP3"
-                        >
-                          <FileAudio className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handlePlay(track)}
-                          className="p-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-all shadow-lg shadow-indigo-600/20 active:scale-90"
-                          title="Play Track"
-                        >
-                          <Play className="w-4 h-4 fill-white text-white" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="flex-1 overflow-hidden pr-2">
+              <AutoSizer>
+                  {(props: any) => (
+                      <VirtualList
+                        style={{ height: props.height, width: props.width }}
+                        rowCount={tracks.length}
+                        rowHeight={viewMode === 'list' ? 76 : 100}
+                        rowProps={{}}
+                        className="custom-scrollbar"
+                        rowComponent={({ index, style }: any) => {
+                            const track = tracks[index];
+                            return (
+                                <div style={style} className="pb-2">
+                                    <div key={track.id} className={`group bg-black/40 hover:bg-white/5 rounded-2xl transition-all border border-white/5 hover:border-white/10 flex items-center gap-4 h-full ${viewMode === 'list' ? 'p-3' : 'p-4'}`}>
+                                        <div className={`${viewMode === 'list' ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                                            <Music className={viewMode === 'list' ? 'w-5 h-5' : 'w-6 h-6'} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold truncate text-sm text-gray-200" title={track.title}>{track.title}</h3>
+                                            <p className="text-xs text-gray-500 font-medium mt-0.5">{track.artist || 'Unknown Artist'}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                            <button
+                                              onClick={() => handleConvert(track)}
+                                              className="p-2 hover:bg-white/10 rounded-xl transition-all text-gray-400 hover:text-white"
+                                              title="Convert to MP3"
+                                            >
+                                              <FileAudio className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                              onClick={() => handlePlay(track)}
+                                              className={`${viewMode === 'list' ? 'p-2.5' : 'p-3'} bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-90`}
+                                              title="Play Track"
+                                            >
+                                              <Play className="w-5 h-5 fill-white text-white" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }}
+                      />
+                  )}
+              </AutoSizer>
             </div>
           )}
         </div>

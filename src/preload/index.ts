@@ -18,6 +18,7 @@ import type {
   MediaSource,
   SMBConfig,
   PluginUITab,
+  GingerMediaProvider,
 } from '@shared/types';
 
 // Create type-safe API
@@ -54,8 +55,8 @@ const electronAPI = {
       ipcRenderer.send('playback:sync-time', { position, duration }),
 
     // Media Engine (Main process services)
-    getStreamUrl: (filePath: string): Promise<string> =>
-      ipcRenderer.invoke('media:get-stream-url', { filePath }),
+    getStreamUrl: (source: MediaSource): Promise<string> =>
+      ipcRenderer.invoke('media:get-stream-url', { source }),
     getMetadata: (filePath: string): Promise<MediaMetadata> =>
       ipcRenderer.invoke('media:get-metadata', { filePath }),
     getSubtitlesUrl: (filePath: string): Promise<string> =>
@@ -176,6 +177,24 @@ const electronAPI = {
         const subscription = (_event: IpcRendererEvent, tabs: PluginUITab[]) => callback(tabs);
         ipcRenderer.on('plugins:ui-updated', subscription);
         return () => { ipcRenderer.removeListener('plugins:ui-updated', subscription); };
+    },
+    getProviders: (): Promise<GingerMediaProvider[]> => ipcRenderer.invoke('plugins:get-providers'),
+    browseProvider: (providerId: string, path?: string): Promise<MediaSource[]> => 
+        ipcRenderer.invoke('plugins:browse-provider', { providerId, path }),
+    searchProviders: (query: string): Promise<MediaSource[]> => 
+        ipcRenderer.invoke('plugins:search-providers', query),
+    onProvidersUpdated: (callback: (providers: GingerMediaProvider[]) => void) => {
+        const subscription = (_event: IpcRendererEvent, providers: GingerMediaProvider[]) => callback(providers);
+        ipcRenderer.on('plugins:providers-updated', subscription);
+        return () => { ipcRenderer.removeListener('plugins:providers-updated', subscription); };
+    },
+    getAll: (): Promise<any[]> => ipcRenderer.invoke('plugins:get-all'),
+    updateSetting: (pluginName: string, key: string, value: any): Promise<void> => 
+        ipcRenderer.invoke('plugins:update-setting', { pluginName, key, value }),
+    onUpdated: (callback: (plugins: any[]) => void) => {
+        const subscription = (_event: IpcRendererEvent, plugins: any[]) => callback(plugins);
+        ipcRenderer.on('plugins:updated', subscription);
+        return () => { ipcRenderer.removeListener('plugins:updated', subscription); };
     },
   },
 

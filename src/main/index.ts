@@ -139,6 +139,14 @@ async function registerIpcHandlers(): Promise<void> {
     mainWindow?.webContents.send('plugins:ui-updated', pluginService?.getRegisteredTabs());
   });
 
+  pluginService?.on('providers-updated', () => {
+    mainWindow?.webContents.send('plugins:providers-updated', pluginService?.getProviders());
+  });
+
+  pluginService?.on('plugins-updated', () => {
+    mainWindow?.webContents.send('plugins:updated', pluginService?.getPlugins());
+  });
+
   // Network Event Listeners
   if (networkManager) {
     networkManager.onServerFound((server) => {
@@ -205,10 +213,20 @@ async function registerIpcHandlers(): Promise<void> {
   });
 
   // Media Engine Handlers
-  ipcMain.handle('media:get-stream-url', async (_event, { filePath }) => {
+  ipcMain.handle('media:get-stream-url', async (_event, { source }) => {
     if (!mediaServer) throw new Error('Media server not running');
+    if (!source || !source.path) {
+        console.warn('[Main] media:get-stream-url called with invalid source:', source);
+        return '';
+    }
+    
+    if (source.type === 'provider' && source.providerId) {
+        return await pluginService?.resolveSource(source) || '';
+    }
+
+    const filePath = source.path;
     const ext = path.extname(filePath).toLowerCase();
-    const directPlayExtensions = ['.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+    const directPlayExtensions = ['.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'];
     const baseUrl = mediaServer.getUrl();
     if (directPlayExtensions.includes(ext)) {
       return `${baseUrl}/file?path=${encodeURIComponent(filePath)}`;
@@ -219,6 +237,9 @@ async function registerIpcHandlers(): Promise<void> {
 
   ipcMain.handle('media:get-metadata', async (_event, { filePath }) => {
     if (!mediaServer) throw new Error('Media server not running');
+    if (!filePath) return null;
+    // For now providers might return metadata already, but we need ffprobe for local
+    // TODO: support provider-returned metadata
     return mediaServer.getMetadata(filePath);
   });
 
@@ -352,9 +373,28 @@ async function registerIpcHandlers(): Promise<void> {
     await networkManager?.connectSMB(config);
   });
 
-  // Plugin Handlers
   ipcMain.handle('plugins:get-ui-tabs', () => {
     return pluginService?.getRegisteredTabs() || [];
+  });
+
+  ipcMain.handle('plugins:get-providers', () => {
+    return pluginService?.getProviders() || [];
+  });
+
+  ipcMain.handle('plugins:browse-provider', async (_event, { providerId, path }) => {
+    return await pluginService?.browseProvider(providerId, path) || [];
+  });
+
+  ipcMain.handle('plugins:search-providers', async (_event, query) => {
+    return await pluginService?.searchProviders(query) || [];
+  });
+
+  ipcMain.handle('plugins:get-all', async () => {
+    return pluginService?.getPlugins() || [];
+  });
+
+  ipcMain.handle('plugins:update-setting', async (_event, { pluginName, key, value }) => {
+    return await pluginService?.updatePluginSetting(pluginName, key, value);
   });
 }
 

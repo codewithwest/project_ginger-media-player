@@ -42,6 +42,7 @@ export interface LibraryTrack {
   bitrate?: number;
   addedAt: number;
   lastModified: number;
+  mediaType: 'audio' | 'video' | 'image';
 }
 
 /**

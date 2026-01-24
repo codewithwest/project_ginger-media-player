@@ -18,6 +18,7 @@ export interface MediaMetadata {
     channels: number;
     sampleRate: number;
   };
+  hasSubtitles: boolean;
   tags?: Record<string, string>;
 }
 
@@ -51,6 +52,7 @@ export class MediaMetadataService {
           format: format.format_name || 'unknown',
           bitrate: format.bit_rate || 0,
           size: format.size || 0,
+          hasSubtitles: metadata.streams.some(s => s.codec_type === 'subtitle'),
           tags: format.tags as Record<string, string>,
         };
 

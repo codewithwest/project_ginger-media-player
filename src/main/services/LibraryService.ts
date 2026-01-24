@@ -67,7 +67,10 @@ export class LibraryService {
 
   async scan(): Promise<LibraryTrack[]> {
     console.log('Scanning library folders...', this.data.folders);
-    const supportedExts = ['.mp3', '.mp4', '.mkv', '.webm', '.wav', '.flac', '.ogg', '.m4a', '.mov', '.avi'];
+    const audioExts = ['.mp3', '.wav', '.flac', '.ogg', '.m4a'];
+    const videoExts = ['.mp4', '.mkv', '.webm', '.mov', '.avi'];
+    const imageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'];
+    const supportedExts = [...audioExts, ...videoExts, ...imageExts];
     const newTracks: LibraryTrack[] = [];
 
     if (this.data.folders.length === 0) {
@@ -107,12 +110,7 @@ export class LibraryService {
               format: metadata.format,
               addedAt: Date.now(),
               lastModified: Date.now(),
-              // metadata property not in Shared Type, maybe extend it or put in a separate map if needed?
-              // The shared type doesn't have metadata field. 
-              // But we can keep it if we extend the type or if we don't need it in frontend explicitly.
-              // Actually, shared type usually defines the contract. 
-              // Let's assume we can add extra props or should add metadata to shared type.
-              // For now, let's cast or omit. The frontend didn't seem to use raw metadata object.
+              mediaType: imageExts.includes(ext) ? 'image' : (videoExts.includes(ext) ? 'video' : 'audio'),
             };
 
             newTracks.push(track);

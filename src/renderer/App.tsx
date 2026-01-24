@@ -5,10 +5,15 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi, Puzzle, Zap } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi, Puzzle, Zap, Search as SearchIcon } from 'lucide-react';
 import { NetworkView } from './components/network/NetworkView';
 import { ConverterView } from './components/converter/ConverterView';
+import { ImageBrowser } from './components/library/ImageBrowser';
+import { ImageViewer } from './components/player/ImageViewer';
+import { SearchView } from './components/search/SearchView';
+import { PluginSettingsView } from './components/plugins/PluginSettingsView';
 import { usePluginStore } from './state/plugins';
+import { useProviderStore } from './state/providers';
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { VideoPlayer } from './components/player/VideoPlayer';
 import { JobDashboard } from './components/jobs/JobDashboard';
@@ -21,13 +26,24 @@ interface CustomCSSProperties extends CSSProperties {
   WebkitAppRegion?: 'drag' | 'no-drag';
 }
 
+const getMediaType = (path: string): 'audio' | 'video' | 'image' => {
+  const ext = path.split('.').pop()?.toLowerCase() || '';
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'].includes(ext)) return 'image';
+  if (['mp4', 'mkv', 'webm', 'mov', 'avi'].includes(ext)) return 'video';
+  return 'audio';
+};
+
 export function App() {
   const { addToPlaylist, playAtIndex, playlist, status, streamUrl } = useMediaPlayerStore();
   const { syncJobs, initializeListeners } = useJobsStore();
   const { tabs: pluginTabs, init: initPlugins } = usePluginStore();
+  const { init: initProviders } = useProviderStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [showConverter, setShowConverter] = useState(false);
+  const [showImages, setShowImages] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showPlugins, setShowPlugins] = useState(false);
 
   const [showReleases, setShowReleases] = useState(false);
 
@@ -65,6 +81,7 @@ export function App() {
 
     // Initialize Plugins
     initPlugins();
+    initProviders();
 
     return () => {
       cleanStatus();
@@ -78,6 +95,7 @@ export function App() {
       const newItems = files.map((filePath: string) => ({
         id: filePath,
         type: 'local' as const,
+        mediaType: getMediaType(filePath),
         path: filePath,
         title: filePath.split('/').pop()
       }));
@@ -94,6 +112,7 @@ export function App() {
       const newItem = {
         id: filePath,
         type: 'local' as const,
+        mediaType: getMediaType(filePath),
         path: filePath,
         title: filePath.split('/').pop() || filePath
       };
@@ -118,11 +137,32 @@ export function App() {
         <div className="flex-1" />
         <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as CustomCSSProperties}>
           <button
+            onClick={() => setShowSearch(!showSearch)}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showSearch ? 'text-primary-400 bg-white/5' : 'text-gray-400'}`}
+            title="Unified Search (Ctrl+F)"
+          >
+            <SearchIcon className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowPlugins(!showPlugins)}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showPlugins ? 'text-indigo-400 bg-white/5' : 'text-gray-400'}`}
+            title="Plugins & Extensions"
+          >
+            <Puzzle className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => setShowLibrary(!showLibrary)}
             className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showLibrary ? 'text-primary-400 bg-white/5' : 'text-gray-400'}`}
             title="Library"
           >
             <Music className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowImages(!showImages)}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showImages ? 'text-indigo-400 bg-white/5' : 'text-gray-400'}`}
+            title="Image Gallery"
+          >
+            <Disc3 className="w-4 h-4 text-indigo-400" />
           </button>
           <button
             onClick={() => setShowConverter(!showConverter)}
@@ -181,7 +221,10 @@ export function App() {
           {showLibrary && <LibraryView onClose={() => setShowLibrary(false)} />}
           {showReleases && <ReleasesView onClose={() => setShowReleases(false)} />}
           {showNetwork && <NetworkView onClose={() => setShowNetwork(false)} />}
+          {showImages && <ImageBrowser onClose={() => setShowImages(false)} />}
           {showConverter && <ConverterView onClose={() => setShowConverter(false)} />}
+          {showSearch && <SearchView onClose={() => setShowSearch(false)} />}
+          {showPlugins && <PluginSettingsView onClose={() => setShowPlugins(false)} />}
           {showJobs && <JobDashboard onClose={() => setShowJobs(false)} />}
           {showEqualizer && <Equalizer onClose={() => setShowEqualizer(false)} />}
 
@@ -189,7 +232,10 @@ export function App() {
           <div className="flex-1 relative flex items-center justify-center overflow-hidden">
             {streamUrl ? (
               <div className="w-full h-full animate-fade-in">
-                <VideoPlayer key={streamUrl} />
+                {useMediaPlayerStore.getState().currentSource?.mediaType === 'image' 
+                    ? <ImageViewer key={streamUrl} />
+                    : <VideoPlayer key={streamUrl} />
+                }
               </div>
             ) : (
               /* Premium Placeholder */

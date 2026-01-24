@@ -1,6 +1,7 @@
 import ffmpeg from 'fluent-ffmpeg';
 import pathToFfmpeg from 'ffmpeg-static';
 import fs from 'fs';
+import path from 'path';
 import { ConversionRequest, JobProgress } from '../../shared/types/media';
 
 export class ConversionService {
@@ -22,6 +23,12 @@ export class ConversionService {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       onProgress({ status: 'running', progress: 0, message: 'Starting conversion...' });
+
+      // Ensure output directory exists
+      const outputDir = path.dirname(request.outputPath);
+      if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+      }
 
       const command = ffmpeg(request.inputPath);
 

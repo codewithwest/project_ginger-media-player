@@ -6,9 +6,11 @@ export type RepeatMode = 'off' | 'one' | 'all';
 
 export interface MediaSource {
   id: string;
-  type: 'local' | 'remote' | 'network';
+  type: 'local' | 'remote' | 'network' | 'provider';
+  mediaType: 'audio' | 'video' | 'image';
   networkType?: 'dlna' | 'smb';
   networkServerId?: string;
+  providerId?: string;
   path: string;
   title?: string;
   artist?: string;
@@ -117,4 +119,13 @@ export interface PluginUITab {
     title: string;
     icon: string;
     route: string;
+}
+
+export interface GingerMediaProvider {
+    id: string;
+    name: string;
+    icon?: string;
+    search?: (query: string) => Promise<MediaSource[]>;
+    browse?: (path?: string) => Promise<MediaSource[]>;
+    resolve?: (source: MediaSource) => Promise<string>; // Resolves to a playable URL/stream
 }

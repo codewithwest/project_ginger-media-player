@@ -10,7 +10,8 @@ import {
     Clock, 
     AlertCircle,
     Plus,
-    Trash2
+    Trash2,
+    Folder
 } from 'lucide-react';
 import type { ConversionRequest } from '@shared/types';
 
@@ -21,14 +22,22 @@ interface ConverterViewProps {
 export function ConverterView({ onClose }: ConverterViewProps) {
   const { jobs, startConversion, cancelJob } = useJobsStore();
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [outputDir, setOutputDir] = useState<string>('');
   const [format, setFormat] = useState<'mp3' | 'aac' | 'flac' | 'wav'>('mp3');
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('high');
+
+  const handlePickOutputDir = async () => {
+    const dir = await window.electronAPI.library.pickFolder();
+    if (dir) {
+      setOutputDir(dir);
+    }
+  };
 
   const handlePickFiles = async () => {
     const files = await window.electronAPI.file.openDialog();
     if (files && files.length > 0) {
       // Filter out files already in the list
-      const newFiles = files.filter(f => !selectedFiles.includes(f));
+      const newFiles = files.filter((f: string) => !selectedFiles.includes(f));
       setSelectedFiles([...selectedFiles, ...newFiles]);
     }
   };
@@ -43,9 +52,13 @@ export function ConverterView({ onClose }: ConverterViewProps) {
     for (const filePath of selectedFiles) {
         const fileName = filePath.split('/').pop() || 'output';
         const baseName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
-        // Assume output to same directory for now, or use downloads path
-        const downloadsPath = await window.electronAPI.app.getDownloadsPath();
-        const outputPath = `${downloadsPath}/${baseName}.${format}`;
+        
+        let finalOutputDir = outputDir;
+        if (!finalOutputDir) {
+            finalOutputDir = await window.electronAPI.app.getDownloadsPath();
+        }
+        
+        const outputPath = `${finalOutputDir}/${baseName}.${format}`;
 
         const request: ConversionRequest = {
             inputPath: filePath,
@@ -174,6 +187,24 @@ export function ConverterView({ onClose }: ConverterViewProps) {
                                 </button>
                             ))}
                         </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                        <Folder className="w-3 h-3" />
+                        Output Directory
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <div className="flex-1 px-4 py-2 bg-black/40 border border-white/5 rounded-xl text-[10px] text-gray-400 truncate">
+                            {outputDir || 'Default: Downloads'}
+                        </div>
+                        <button 
+                            onClick={handlePickOutputDir}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-bold text-gray-300 transition-all"
+                        >
+                            Change
+                        </button>
                     </div>
                 </div>
 

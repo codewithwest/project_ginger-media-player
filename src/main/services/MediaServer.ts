@@ -111,7 +111,7 @@ export class MediaServer {
     });
 
     // 4. Subtitles (VTT extraction)
-    this.app.get('/subtitles', (req, res) => {
+    this.app.get('/subtitles', async (req, res) => {
       const filePath = req.query.path as string;
 
       if (!filePath || !fs.existsSync(filePath)) {
@@ -119,17 +119,27 @@ export class MediaServer {
         return;
       }
 
-      console.log(`[MediaServer] Extracting subtitles for: ${filePath}`);
+      try {
+        // Quick check for subtitles
+        const metadata = await this.metadataService.getMetadata(filePath);
+        if (!metadata.hasSubtitles) {
+            res.status(204).end(); // No Content
+            return;
+        }
 
-      res.setHeader('Content-Type', 'text/vtt');
+        console.log(`[MediaServer] Extracting subtitles for: ${filePath}`);
+        res.setHeader('Content-Type', 'text/vtt');
 
-      const command = this.transcoder.extractSubtitles(filePath);
+        const command = this.transcoder.extractSubtitles(filePath);
+        command.pipe(res, { end: true });
 
-      command.pipe(res, { end: true });
-
-      req.on('close', () => {
-        command.kill('SIGKILL');
-      });
+        req.on('close', () => {
+            command.kill('SIGKILL');
+        });
+      } catch (e) {
+          console.error('[MediaServer] Subtitle extraction check failed:', e);
+          res.status(500).send('Error checking subtitles');
+      }
     });
 
     // 5. Network Proxy (SMB/DLNA)
