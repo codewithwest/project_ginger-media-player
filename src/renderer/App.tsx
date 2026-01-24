@@ -5,8 +5,9 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi, Puzzle } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi, Puzzle, Zap } from 'lucide-react';
 import { NetworkView } from './components/network/NetworkView';
+import { ConverterView } from './components/converter/ConverterView';
 import { usePluginStore } from './state/plugins';
 import { PlaylistSidebar } from './components/playlist/PlaylistSidebar';
 import { VideoPlayer } from './components/player/VideoPlayer';
@@ -26,6 +27,7 @@ export function App() {
   const { tabs: pluginTabs, init: initPlugins } = usePluginStore();
   const [showJobs, setShowJobs] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [showConverter, setShowConverter] = useState(false);
 
   const [showReleases, setShowReleases] = useState(false);
 
@@ -123,6 +125,13 @@ export function App() {
             <Music className="w-4 h-4" />
           </button>
           <button
+            onClick={() => setShowConverter(!showConverter)}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showConverter ? 'text-yellow-400 bg-white/5' : 'text-gray-400'}`}
+            title="Audio Extractor"
+          >
+            <Zap className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => setShowJobs(!showJobs)}
             className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${showJobs ? 'text-blue-400 bg-white/5' : 'text-gray-400'}`}
             title="Show Jobs"
@@ -172,6 +181,7 @@ export function App() {
           {showLibrary && <LibraryView onClose={() => setShowLibrary(false)} />}
           {showReleases && <ReleasesView onClose={() => setShowReleases(false)} />}
           {showNetwork && <NetworkView onClose={() => setShowNetwork(false)} />}
+          {showConverter && <ConverterView onClose={() => setShowConverter(false)} />}
           {showJobs && <JobDashboard onClose={() => setShowJobs(false)} />}
           {showEqualizer && <Equalizer onClose={() => setShowEqualizer(false)} />}
 

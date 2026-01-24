@@ -34,6 +34,11 @@ export class ConversionService {
         else command.audioBitrate(192);
       } else if (request.format === 'aac') {
         command.audioCodec('aac');
+        if (request.quality === 'high') command.audioBitrate(256);
+        else if (request.quality === 'low') command.audioBitrate(96);
+        else command.audioBitrate(160);
+      } else if (request.format === 'flac') {
+        command.audioCodec('flac');
       } else if (request.format === 'wav') {
         command.format('wav');
       }

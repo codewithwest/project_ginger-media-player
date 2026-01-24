@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Job, JobProgress } from '../../shared/types/media';
+import { Job, JobProgress, ConversionRequest } from '../../shared/types/media';
 
 interface JobsState {
   jobs: Job[];
@@ -11,6 +11,8 @@ interface JobsState {
   clearCompleted: () => void;
   clearHistory: () => Promise<void>;
   initializeListeners: () => () => void;
+  startConversion: (request: ConversionRequest) => Promise<void>;
+  cancelJob: (jobId: string) => Promise<void>;
 }
 
 export const useJobsStore = create<JobsState>((set) => ({
@@ -75,6 +77,24 @@ export const useJobsStore = create<JobsState>((set) => ({
       });
     });
     return cleanup;
+  },
+
+  startConversion: async (request: ConversionRequest) => {
+    try {
+      const response = await window.electronAPI.jobs.startConversion(request);
+      // Job will be added automatically via listener, but we could optimistically add it here too
+      console.log('Conversion started:', response.jobId);
+    } catch (error) {
+      console.error('Failed to start conversion:', error);
+    }
+  },
+
+  cancelJob: async (jobId: string) => {
+    try {
+      await window.electronAPI.jobs.cancel(jobId);
+    } catch (error) {
+      console.error('Failed to cancel job:', error);
+    }
   }
 }));
 
