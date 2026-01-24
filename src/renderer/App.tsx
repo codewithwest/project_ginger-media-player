@@ -130,8 +130,16 @@ export function App() {
 
       {/* Title Bar - Draggable */}
       <div className="h-10 w-full glass flex items-center px-4 select-none z-50" style={{ WebkitAppRegion: 'drag' } as CustomCSSProperties}>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+        <div className="flex items-center gap-3">
+          <div className="relative group/logo">
+            <div className="absolute -inset-1 bg-primary-500/20 rounded-full blur opacity-0 group-hover/logo:opacity-100 transition-opacity" />
+            <img 
+              src="http://127.0.0.1:3000/logo" 
+              alt="Ginger Logo" 
+              className="w-5 h-5 object-contain relative z-10"
+              style={{ WebkitAppRegion: 'no-drag' } as CustomCSSProperties}
+            />
+          </div>
           <div className="text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase">Ginger Media</div>
           {zenMode && (
               <button 

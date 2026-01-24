@@ -222,6 +222,16 @@ export class MediaServer {
             res.status(500).send('Thumbnail service failed');
         }
     });
+
+    // 7. App Logo
+    this.app.get('/logo', (_req, res) => {
+      const logoPath = path.join(app.getAppPath(), 'logo.png');
+      if (fs.existsSync(logoPath)) {
+        res.sendFile(logoPath);
+      } else {
+        res.status(404).send('Logo not found');
+      }
+    });
   }
 
   async start(): Promise<string> {

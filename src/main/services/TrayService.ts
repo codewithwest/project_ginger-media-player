@@ -12,7 +12,7 @@ export class TrayService {
   createTray() {
     // Attempt to find an icon
     const iconPath = this.getIconPath();
-    const icon = nativeImage.createFromPath(iconPath);
+    const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16, quality: 'best' });
 
     // Fallback if no icon found? Electron might show transparent or default
     // On Linux/Windows, we really need an icon.
@@ -32,11 +32,10 @@ export class TrayService {
   }
 
   private getIconPath(): string {
-    // In production, resources are usually in process.resourcesPath
-    // In dev, maybe in public or assets? 
-    // For now, let's try a common location or just a dummy
-    // TODO: Add a real icon
-    return path.join(__dirname, '../../assets/icon.png');
+    // logo.png is in the project root
+    // In dev: __dirname is src/main/services, logo is ../../logo.png
+    // In prod: process.resourcesPath or similar might be needed, but for now let's use absolute if possible or relative to app path
+    return path.join(app.getAppPath(), 'logo.png');
   }
 
   private updateContextMenu() {
