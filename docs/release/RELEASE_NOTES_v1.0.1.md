@@ -30,13 +30,13 @@ Download the appropriate package for your system:
 
 **Linux (.deb)**
 ```bash
-sudo dpkg -i ginger-media-player_1.0.1_amd64.deb
+sudo dpkg -i ginger-media-handler_1.0.1_amd64.deb
 ```
 
 **Linux (.AppImage)**
 ```bash
-chmod +x Ginger-Media-Player-1.0.1.AppImage
-./Ginger-Media-Player-1.0.1.AppImage
+chmod +x ginger-media-handler-1.0.1.AppImage
+./ginger-media-handler-1.0.1.AppImage
 ```
 
 ---

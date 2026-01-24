@@ -85,7 +85,7 @@ npm run make
 ## 📂 Project Structure
 
 ```
-project_ginger-media-player/
+project_ginger-media-handler/
 ├── src/
 │   ├── main/           # Electron Main Process
 │   │   ├── services/   # Business logic (Library, Playlist, Update, Job)

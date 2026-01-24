@@ -255,7 +255,7 @@ class GenericHttpDownloader implements IMediaDownloader {
 ## 3. Folder & Module Structure
 
 ```
-ginger-media-player/
+ginger-media-handler/
 ├── src/
 │   ├── main/                      # Main Process (Node.js)
 │   │   ├── index.ts               # Entry point

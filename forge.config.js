@@ -6,7 +6,7 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 const config = {
    packagerConfig: {
       asar: true,
-      executableName: 'ginger-media-player',
+      executableName: 'ginger-media-handler',
       extraResource: ['./docs'],
    },
    rebuildConfig: {},

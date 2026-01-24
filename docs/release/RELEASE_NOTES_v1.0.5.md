@@ -19,7 +19,7 @@ Ginger Media Player now acts as a connected hub for all your home media.
 ## 🔌 Plugin Architecture (Phase 1)
 Ginger is now extensible! We have introduced a foundational plugin system that allows developers and automation scripts to hook into the media player.
 
-- **Dynamic Loading**: Plugins are loaded from the user configuration directory (`~/.config/ginger-media-player/plugins` on Linux).
+- **Dynamic Loading**: Plugins are loaded from the user configuration directory (`~/.config/ginger-media-handler/plugins` on Linux).
 - **Expansion API**: Plugins can now listen to playback events and interact with the app's internal logging.
 - **Sandbox Bridge**: A secure API object is provided to plugins to ensure stability.
 

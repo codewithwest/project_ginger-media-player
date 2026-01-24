@@ -7,7 +7,7 @@
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd project_ginger-media-player
+   cd project_ginger-media-handler
    ```
 
 2. **Install dependencies**
