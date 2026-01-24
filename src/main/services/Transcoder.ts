@@ -1,6 +1,7 @@
 import ffmpeg from 'fluent-ffmpeg';
 import pathToFfmpeg from 'ffmpeg-static';
 import fs from 'fs';
+import path from 'path';
 
 
 export class TranscoderService {
@@ -66,5 +67,25 @@ export class TranscoderService {
         if (err.message.includes('Output stream closed')) return;
         console.error('Subtitle extraction error:', err.message);
       });
+  }
+
+  /**
+   * Generates a thumbnail command for a media file (image or video).
+   * For videos and GIFs, it takes the first frame.
+   */
+  createThumbnail(filePath: string): ffmpeg.FfmpegCommand {
+    const ext = path.extname(filePath).toLowerCase();
+    const isVideo = ['.mp4', '.mkv', '.webm', '.mov', '.avi'].includes(ext);
+    const isGif = ext === '.gif';
+
+    const command = ffmpeg(filePath).size('320x?');
+    
+    if (isVideo || isGif) {
+      return command
+        .seekInput(0)
+        .frames(1);
+    }
+    
+    return command;
   }
 }

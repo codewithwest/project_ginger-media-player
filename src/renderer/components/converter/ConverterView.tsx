@@ -99,123 +99,125 @@ export function ConverterView({ onClose }: ConverterViewProps) {
 
         <div className="flex-1 flex overflow-hidden">
             {/* Left Column: Setup */}
-            <div className="w-2/3 flex flex-col border-r border-white/5 p-6 gap-6">
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2">
-                            <FileVideo className="w-4 h-4" />
-                            Source Videos
-                        </h3>
-                        <button 
-                            onClick={handlePickFiles}
-                            className="text-[10px] font-bold text-primary-500 hover:text-primary-400 transition-colors uppercase flex items-center gap-1"
-                        >
-                            <Plus className="w-3 h-3" />
-                            Add Files
-                        </button>
-                    </div>
+            <div className="w-2/3 flex flex-col border-r border-white/5">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2">
+                                <FileVideo className="w-4 h-4" />
+                                Source Videos
+                            </h3>
+                            <button 
+                                onClick={handlePickFiles}
+                                className="text-[10px] font-bold text-primary-500 hover:text-primary-400 transition-colors uppercase flex items-center gap-1"
+                            >
+                                <Plus className="w-3 h-3" />
+                                Add Files
+                            </button>
+                        </div>
 
-                    <div className="h-64 border border-white/5 bg-black/20 rounded-2xl overflow-y-auto custom-scrollbar p-2 space-y-1">
-                        {selectedFiles.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center opacity-30 select-none">
-                                <FileVideo className="w-12 h-12 mb-2" />
-                                <p className="text-xs">No files selected</p>
-                            </div>
-                        ) : (
-                            selectedFiles.map((file, i) => (
-                                <div key={file} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl group">
-                                    <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center">
-                                        <FileVideo className="w-4 h-4 text-gray-500" />
-                                    </div>
-                                    <span className="flex-1 text-xs text-gray-400 truncate">{file.split('/').pop()}</span>
-                                    <button 
-                                        onClick={() => handleRemoveFile(i)}
-                                        className="p-1.5 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                        <div className="min-h-[160px] max-h-64 border border-white/5 bg-black/20 rounded-2xl overflow-y-auto custom-scrollbar p-2 space-y-1">
+                            {selectedFiles.length === 0 ? (
+                                <div className="h-32 flex flex-col items-center justify-center text-center opacity-30 select-none">
+                                    <FileVideo className="w-12 h-12 mb-2" />
+                                    <p className="text-xs">No files selected</p>
                                 </div>
-                            ))
-                        )}
+                            ) : (
+                                selectedFiles.map((file, i) => (
+                                    <div key={file} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl group">
+                                        <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center">
+                                            <FileVideo className="w-4 h-4 text-gray-500" />
+                                        </div>
+                                        <span className="flex-1 text-xs text-gray-400 truncate">{file.split('/').pop()}</span>
+                                        <button 
+                                            onClick={() => handleRemoveFile(i)}
+                                            className="p-1.5 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <Settings2 className="w-3 h-3" />
+                                Output Format
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                {['mp3', 'aac', 'flac', 'wav'].map((f: string) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setFormat(f as any)}
+                                        className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
+                                            format === f 
+                                            ? 'bg-primary-500/10 border-primary-500/50 text-white shadow-glow-sm' 
+                                            : 'bg-white/5 border-transparent text-gray-500 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {f.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <Clock className="w-3 h-3" />
+                                Quality Preset
+                            </label>
+                            <div className="space-y-2">
+                                {['high', 'medium', 'low'].map((q: string) => (
+                                    <button
+                                        key={q}
+                                        onClick={() => setQuality(q as any)}
+                                        className={`w-full py-2 px-4 rounded-xl text-xs font-bold text-left transition-all border ${
+                                            quality === q 
+                                            ? 'bg-primary-500/10 border-primary-500/50 text-white' 
+                                            : 'bg-white/5 border-transparent text-gray-500 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {q.charAt(0).toUpperCase() + q.slice(1)} 
+                                        <span className="text-[9px] ml-2 opacity-50">
+                                            {format === 'mp3' ? (q === 'high' ? '320kbps' : q === 'medium' ? '192kbps' : '128kbps') : ''}
+                                            {format === 'aac' ? (q === 'high' ? '256kbps' : q === 'medium' ? '160kbps' : '96kbps') : ''}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                            <Settings2 className="w-3 h-3" />
-                            Output Format
+                            <Folder className="w-3 h-3" />
+                            Output Directory
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {['mp3', 'aac', 'flac', 'wav'].map((f: string) => (
-                                <button
-                                    key={f}
-                                    onClick={() => setFormat(f as any)}
-                                    className={`py-2 px-4 rounded-xl text-xs font-bold transition-all border ${
-                                        format === f 
-                                        ? 'bg-primary-500/10 border-primary-500/50 text-white shadow-glow-sm' 
-                                        : 'bg-white/5 border-transparent text-gray-500 hover:bg-white/10'
-                                    }`}
-                                >
-                                    {f.toUpperCase()}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                            <Clock className="w-3 h-3" />
-                            Quality Preset
-                        </label>
-                        <div className="space-y-2">
-                            {['high', 'medium', 'low'].map((q: string) => (
-                                <button
-                                    key={q}
-                                    onClick={() => setQuality(q as any)}
-                                    className={`w-full py-2 px-4 rounded-xl text-xs font-bold text-left transition-all border ${
-                                        quality === q 
-                                        ? 'bg-primary-500/10 border-primary-500/50 text-white' 
-                                        : 'bg-white/5 border-transparent text-gray-500 hover:bg-white/10'
-                                    }`}
-                                >
-                                    {q.charAt(0).toUpperCase() + q.slice(1)} 
-                                    <span className="text-[9px] ml-2 opacity-50">
-                                        {format === 'mp3' ? (q === 'high' ? '320kbps' : q === 'medium' ? '192kbps' : '128kbps') : ''}
-                                        {format === 'aac' ? (q === 'high' ? '256kbps' : q === 'medium' ? '160kbps' : '96kbps') : ''}
-                                    </span>
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1 px-4 py-2 bg-black/40 border border-white/5 rounded-xl text-[10px] text-gray-400 truncate">
+                                {outputDir || 'Default: Downloads'}
+                            </div>
+                            <button 
+                                onClick={handlePickOutputDir}
+                                className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-bold text-gray-300 transition-all"
+                            >
+                                Change
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                        <Folder className="w-3 h-3" />
-                        Output Directory
-                    </label>
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 px-4 py-2 bg-black/40 border border-white/5 rounded-xl text-[10px] text-gray-400 truncate">
-                            {outputDir || 'Default: Downloads'}
-                        </div>
-                        <button 
-                            onClick={handlePickOutputDir}
-                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-bold text-gray-300 transition-all"
-                        >
-                            Change
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mt-auto">
+                <div className="p-6 border-t border-white/5 bg-black/20">
                     <button
                         onClick={handleStartConversion}
                         disabled={selectedFiles.length === 0}
                         className="w-full py-4 bg-primary-600 hover:bg-primary-500 disabled:opacity-50 disabled:hover:bg-primary-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg shadow-primary-900/40"
                     >
                         <Play className="w-4 h-4 fill-current" />
-                        Start Extraction
+                        Extract Audio
                     </button>
                 </div>
             </div>

@@ -5,11 +5,10 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { Background3D } from './components/3d/Background3D';
 import { PlayerControls } from './components/player/PlayerControls';
 import { useMediaPlayerStore } from './state/media-player';
-import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi, Puzzle, Zap, Search as SearchIcon } from 'lucide-react';
+import { Disc3, FolderOpen, Activity, Music, FileText, ListMusic, Wifi, Puzzle, Zap, Search as SearchIcon, EyeOff } from 'lucide-react';
 import { NetworkView } from './components/network/NetworkView';
 import { ConverterView } from './components/converter/ConverterView';
 import { ImageBrowser } from './components/library/ImageBrowser';
-import { ImageViewer } from './components/player/ImageViewer';
 import { SearchView } from './components/search/SearchView';
 import { PluginSettingsView } from './components/plugins/PluginSettingsView';
 import { usePluginStore } from './state/plugins';
@@ -51,6 +50,7 @@ export function App() {
   const [showEqualizer, setShowEqualizer] = useState(false);
   const [showQueue, setShowQueue] = useState(true);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
 
   useEffect(() => {
     // Initialize Media Player (Sync with Main Process)
@@ -133,6 +133,15 @@ export function App() {
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
           <div className="text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase">Ginger Media</div>
+          {zenMode && (
+              <button 
+                onClick={() => setZenMode(false)}
+                className="ml-4 px-3 py-0.5 bg-primary-600/20 border border-primary-500/30 rounded-full text-[8px] font-black text-primary-400 hover:bg-primary-500 hover:text-white transition-all animate-fade-in"
+                style={{ WebkitAppRegion: 'no-drag' } as CustomCSSProperties}
+              >
+                EXIT ZEN MODE
+              </button>
+          )}
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as CustomCSSProperties}>
@@ -199,6 +208,13 @@ export function App() {
           >
             <ListMusic className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => setZenMode(!zenMode)}
+            className={`p-1.5 rounded-lg hover:bg-white/10 transition-all ${zenMode ? 'text-primary-400 bg-white/5 shadow-glow-sm' : 'text-gray-400'}`}
+            title="Zen Mode (Hide Controls)"
+          >
+            <EyeOff className="w-4 h-4" />
+          </button>
 
           {/* Plugin Tabs */}
           {pluginTabs.map(tab => (
@@ -231,11 +247,8 @@ export function App() {
           {/* Main Stage (Player) */}
           <div className="flex-1 relative flex items-center justify-center overflow-hidden">
             {streamUrl ? (
-              <div className="w-full h-full animate-fade-in">
-                {useMediaPlayerStore.getState().currentSource?.mediaType === 'image' 
-                    ? <ImageViewer key={streamUrl} />
-                    : <VideoPlayer key={streamUrl} />
-                }
+              <div className="w-full h-full animate-fade-in relative">
+                <VideoPlayer key={streamUrl} />
               </div>
             ) : (
               /* Premium Placeholder */
@@ -308,15 +321,17 @@ export function App() {
       )}
 
       {/* Bottom Controls */}
-      <div className="h-28 glass-dark border-t border-white/5 relative z-50">
-        <div className="max-w-7xl mx-auto h-full flex items-center px-8">
-          <PlayerControls
-            onToggleQueue={() => setShowQueue(!showQueue)}
-            queueVisible={showQueue}
-            onToggleEqualizer={() => setShowEqualizer(!showEqualizer)}
-          />
+      {!zenMode && (
+        <div className="h-28 glass-dark border-t border-white/5 relative z-50 animate-in slide-in-from-bottom duration-500">
+            <div className="max-w-7xl mx-auto h-full flex items-center px-8">
+            <PlayerControls
+                onToggleQueue={() => setShowQueue(!showQueue)}
+                queueVisible={showQueue}
+                onToggleEqualizer={() => setShowEqualizer(!showEqualizer)}
+            />
+            </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

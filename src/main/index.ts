@@ -200,6 +200,10 @@ async function registerIpcHandlers(): Promise<void> {
     return libraryService?.getFolders();
   });
 
+  ipcMain.handle('library:rename', async (_event, { id, newName }) => {
+    return await libraryService?.renameTrack(id, newName);
+  });
+
   // Resume Playback
   ipcMain.on('playback:sync-time', (_event, { position }) => {
     const currentState = playbackService?.getState();

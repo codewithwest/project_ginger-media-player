@@ -3,6 +3,9 @@ import getPort from 'get-port';
 import cors from 'cors';
 import { Server } from 'http';
 import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { app } from 'electron';
 import { TranscoderService } from './Transcoder';
 import { MediaMetadataService } from './MediaMetadata';
 import { NetworkManager } from './network/NetworkManager';
@@ -179,6 +182,45 @@ export class MediaServer {
         console.error('[MediaServer] Proxy error:', err);
         res.status(500).send('Proxy failed');
       }
+    });
+    
+    // 6. Thumbnails (resized for gallery performance)
+    this.app.get('/thumbnail', async (req, res) => {
+        const filePath = req.query.path as string;
+        if (!filePath || !fs.existsSync(filePath)) {
+            res.status(404).send('File not found');
+            return;
+        }
+
+        const thumbDir = path.join(app.getPath('userData'), 'thumbnails');
+        if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
+
+        // Create stable hash for cache key
+        const hash = crypto.createHash('md5').update(filePath).digest('hex');
+        const thumbPath = path.join(thumbDir, `${hash}.jpg`);
+
+        if (fs.existsSync(thumbPath)) {
+            res.sendFile(thumbPath);
+            return;
+        }
+
+        try {
+            console.log(`[MediaServer] Generating thumbnail for: ${filePath}`);
+            // Generate thumbnail using ffmpeg
+            this.transcoder.createThumbnail(filePath)
+                .on('end', () => {
+                    console.log(`[MediaServer] Thumbnail generated: ${thumbPath}`);
+                    if (!res.headersSent) res.sendFile(thumbPath);
+                })
+                .on('error', (err: Error) => {
+                    console.error(`[MediaServer] FFmpeg thumbnail error for ${filePath}:`, err.message);
+                    if (!res.headersSent) res.status(500).send('Failed to generate thumbnail');
+                })
+                .save(thumbPath);
+        } catch (e: any) {
+            console.error('[MediaServer] Thumbnail service exception:', e);
+            res.status(500).send('Thumbnail service failed');
+        }
     });
   }
 

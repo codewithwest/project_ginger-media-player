@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { useLibraryStore } from '../../state/library';
 import { useMediaPlayerStore } from '../../state/media-player';
 import { FolderPlus, Music, Play, X, Loader2, FileAudio, LayoutGrid, List } from 'lucide-react';
-import { List as VirtualList } from 'react-window';
-import { AutoSizer } from 'react-virtualized-auto-sizer';
 import type { LibraryTrack } from '@shared/types';
 
 export function LibraryView({ onClose }: { onClose: () => void }) {
@@ -92,7 +90,7 @@ export function LibraryView({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Main Content - Tracks */}
-        <div className="flex-1 bg-white/5 rounded-3xl p-8 border border-white/10 overflow-hidden flex flex-col glass">
+        <div className="flex-1 bg-white/5 rounded-3xl p-8 border border-white/10 overflow-hidden flex flex-col glass min-w-0">
           <div className="flex justify-between items-center mb-8 flex-shrink-0">
             <h2 className="text-2xl font-bold">All Tracks <span className="text-gray-500 font-medium ml-2 text-lg">({tracks.length})</span></h2>
             <div className="flex items-center gap-3">
@@ -137,7 +135,7 @@ export function LibraryView({ onClose }: { onClose: () => void }) {
                     <span>Scanning...</span>
                   </>
                 ) : (
-                  'Rescan Library'
+                  'Rescan'
                 )}
               </button>
             </div>
@@ -152,50 +150,36 @@ export function LibraryView({ onClose }: { onClose: () => void }) {
               <p className="text-sm text-gray-500 mt-1">Add a folder to start scanning your media.</p>
             </div>
           ) : (
-            <div className="flex-1 overflow-hidden pr-2">
-              <AutoSizer>
-                  {(props: any) => (
-                      <VirtualList
-                        style={{ height: props.height, width: props.width }}
-                        rowCount={tracks.length}
-                        rowHeight={viewMode === 'list' ? 76 : 100}
-                        rowProps={{}}
-                        className="custom-scrollbar"
-                        rowComponent={({ index, style }: any) => {
-                            const track = tracks[index];
-                            return (
-                                <div style={style} className="pb-2">
-                                    <div key={track.id} className={`group bg-black/40 hover:bg-white/5 rounded-2xl transition-all border border-white/5 hover:border-white/10 flex items-center gap-4 h-full ${viewMode === 'list' ? 'p-3' : 'p-4'}`}>
-                                        <div className={`${viewMode === 'list' ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                                            <Music className={viewMode === 'list' ? 'w-5 h-5' : 'w-6 h-6'} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold truncate text-sm text-gray-200" title={track.title}>{track.title}</h3>
-                                            <p className="text-xs text-gray-500 font-medium mt-0.5">{track.artist || 'Unknown Artist'}</p>
-                                        </div>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                            <button
-                                              onClick={() => handleConvert(track)}
-                                              className="p-2 hover:bg-white/10 rounded-xl transition-all text-gray-400 hover:text-white"
-                                              title="Convert to MP3"
-                                            >
-                                              <FileAudio className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                              onClick={() => handlePlay(track)}
-                                              className={`${viewMode === 'list' ? 'p-2.5' : 'p-3'} bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-90`}
-                                              title="Play Track"
-                                            >
-                                              <Play className="w-5 h-5 fill-white text-white" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        }}
-                      />
-                  )}
-              </AutoSizer>
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 min-h-0">
+              <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-3"}>
+                  {tracks.map((track, index) => (
+                    <div key={track.id || track.path || index} className={`group bg-black/40 hover:bg-white/5 rounded-2xl transition-all border border-white/5 hover:border-white/10 flex items-center gap-4 ${viewMode === 'list' ? 'p-3' : 'p-4'}`}>
+                        <div className={`${viewMode === 'list' ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                            <Music className={viewMode === 'list' ? 'w-5 h-5' : 'w-6 h-6'} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-bold truncate text-sm text-gray-200" title={track.title}>{track.title || 'Untitled Track'}</h3>
+                            <p className="text-xs text-gray-500 font-medium mt-0.5">{track.artist || 'Unknown Artist'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 pr-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleConvert(track); }}
+                                className="p-2 hover:bg-indigo-500/20 rounded-xl transition-all text-gray-500 hover:text-indigo-400"
+                                title="Add to Converter"
+                            >
+                                <FileAudio className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handlePlay(track); }}
+                                className={`${viewMode === 'list' ? 'p-2' : 'p-2.5'} bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-95`}
+                                title="Play"
+                            >
+                                <Play className="w-4 h-4 fill-white text-white" />
+                            </button>
+                        </div>
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
         </div>

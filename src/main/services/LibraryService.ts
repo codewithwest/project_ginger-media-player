@@ -126,6 +126,33 @@ export class LibraryService {
     return newTracks;
   }
 
+  async renameTrack(id: string, newName: string): Promise<LibraryTrack> {
+    const tracks = this.getTracks();
+    const index = tracks.findIndex(t => t.id === id);
+    if (index === -1) throw new Error('Track not found');
+
+    const track = tracks[index];
+    const oldPath = track.path;
+    const directory = path.dirname(oldPath);
+    const ext = path.extname(oldPath);
+    const newPath = path.join(directory, newName + ext);
+
+    if (fs.existsSync(newPath)) {
+      throw new Error('A file with this name already exists');
+    }
+
+    // Rename on disk
+    fs.renameSync(oldPath, newPath);
+
+    // Update metadata
+    track.path = newPath;
+    track.title = newName;
+    track.id = this.generateId(newPath);
+
+    this.save();
+    return track;
+  }
+
   private async recursiveReaddir(dir: string): Promise<string[]> {
     try {
       const dirents = await fs.promises.readdir(dir, { withFileTypes: true });

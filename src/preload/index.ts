@@ -121,6 +121,7 @@ const electronAPI = {
     getAll: (): Promise<LibraryTrack[]> => ipcRenderer.invoke('library:get-all'),
     getFolders: (): Promise<string[]> => ipcRenderer.invoke('library:get-folders'),
     pickFolder: (): Promise<string | null> => ipcRenderer.invoke('library:pick-folder'),
+    rename: (id: string, newName: string): Promise<LibraryTrack> => ipcRenderer.invoke('library:rename', { id, newName }),
   },
 
   // Window controls
